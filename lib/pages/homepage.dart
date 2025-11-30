@@ -10,7 +10,23 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  final List<String> days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  @override
+  void initState(){
+    super.initState();
+    _tabController = TabController(length: 7, vsync: this); 
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose(); 
+  }
+
   void _deleteExpense(int index) {
     setState(() {
       HomePage.expenses.removeAt(index);
@@ -137,50 +153,72 @@ class _HomePageState extends State<HomePage> {
     final total = HomePage.expenses.fold(0.0, (sum, e) => sum + e.amount);
 
     return Scaffold(
-      body: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            color: Colors.green.shade100,
-            child: Text(
-              'Total: ₱${total.toStringAsFixed(2)}',
-              style:
-                  const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            child: HomePage.expenses.isEmpty
-                ? const Center(child: Text('No expenses yet.'))
-                : ListView.builder(
-                    itemCount: HomePage.expenses.length,
-                    itemBuilder: (context, index) {
-                      final e = HomePage.expenses[index];
-                      return ListTile(
-                        title: Text(e.name),
-                        subtitle: Text(
-                          '₱${e.amount.toStringAsFixed(2)} • ${e.category}\n'
-                          '${e.details.isNotEmpty ? "${e.details}\n" : ""}'
-                          '${e.date.toLocal().toString().split(' ')[0]}',
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () => _openEditExpenseDialog(index),
+      appBar: AppBar(
+        title: const Text("Weekly Expenses"),
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabs: days.map((d) => Tab(text: d)).toList(),
+        ),
+      ),
+
+      body: TabBarView(
+        controller: _tabController,
+        children: days.map((day) {
+          // Filter expenses by selected weekday
+          final filtered = HomePage.expenses.where((e) {
+            final weekday = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][e.date.weekday - 1];
+            return weekday == day;
+          }).toList();
+
+          return Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                color: Colors.green.shade200,
+                child: Text(
+                  'Weekly Sum: ₱${total.toStringAsFixed(2)}',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+
+            Expanded(
+              child: filtered.isEmpty
+                    ? Center(child: Text('No expenses for $day.'))
+                    : ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final e = filtered[index];
+                          final realIndex = HomePage.expenses.indexOf(e);
+
+                          return ListTile(
+                            title: Text(e.name),
+                            subtitle: Text(
+                              '₱${e.amount.toStringAsFixed(2)} • ${e.category}\n'
+                              '${e.details.isNotEmpty ? "${e.details}\n" : ""}'
+                              '${e.date.toLocal().toString().split(' ')[0]}',
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Color.fromARGB(255, 94, 23, 18)),
-                              onPressed: () => _deleteExpense(index),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit, color: Colors.blue),
+                                  onPressed: () => _openEditExpenseDialog(realIndex),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Color.fromARGB(255, 94, 23, 18)),
+                                  onPressed: () => _deleteExpense(realIndex),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
+                          );
+                        },
+                      ),
+              ),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
