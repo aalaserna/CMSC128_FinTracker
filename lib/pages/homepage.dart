@@ -13,12 +13,19 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final List<String> days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+List<DateTime> getCurrentWeekDates() {
+    final now = DateTime.now();
+    final startOfWeek = now.subtract(Duration(days: now.weekday -1));
+    return List.generate(7, (i) => startOfWeek.add(Duration(days: i)));
+  }
+
+late List<DateTime> weekDates; 
 
   @override
   void initState(){
     super.initState();
-    _tabController = TabController(length: 7, vsync: this); 
+    weekDates = getCurrentWeekDates(); 
+    _tabController = TabController(length: weekDates.length, vsync: this); 
   }
 
   @override
@@ -158,17 +165,22 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          tabs: days.map((d) => Tab(text: d)).toList(),
+          tabs: weekDates.map((date) => Tab(
+            text: '${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][date.weekday-1]} ${date.day}/${date.month}',
+          )).toList(),
         ),
       ),
 
       body: TabBarView(
         controller: _tabController,
-        children: days.map((day) {
+        children: weekDates.asMap().entries.map((entry) {
+          final index = entry.key;
+          final day = entry.value; 
           // Filter expenses by selected weekday
           final filtered = HomePage.expenses.where((e) {
-            final weekday = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][e.date.weekday - 1];
-            return weekday == day;
+            return e.date.year == weekDates[index].year &&
+                   e.date.month == weekDates[index].month &&
+                   e.date.day == weekDates[index].day;
           }).toList();
 
           return Column(
