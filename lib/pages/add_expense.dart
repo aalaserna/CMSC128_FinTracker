@@ -85,14 +85,14 @@ class _AddExpensePageState extends State<AddExpensePage> {
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    HomePage.expenses.add(Expense(
+                   final newExpense = Expense(
                       name: name,
                       amount: double.parse(amount),
                       category: category,
                       date: selectedDate,
                       details: details,
-                    ));
-                    Navigator.pop(context);
+                    );
+                    Navigator.pop(context, newExpense);
                   }
                 },
                 child: const Text('Add Expense'),

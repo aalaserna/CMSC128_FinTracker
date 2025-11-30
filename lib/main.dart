@@ -44,7 +44,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   Widget build(BuildContext context) {
     final pages = <Widget>[
       const SummaryPage(),
-      const HomePage(),
+      HomePage(),
       const CustomizationPage(),
       const ProfilePage(), // dummy
     ];
@@ -53,12 +53,17 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       body: pages[_bottomNavIndex],
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          // navigate to AddExpensePage
-          await Navigator.push(
+          final newExpense = await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const AddExpensePage()),
           );
-          setState(() => _bottomNavIndex = 1);
+
+          if (newExpense != null) {
+            setState(() {
+              HomePage.expenses.add(newExpense); // rebuild HomePage
+              _bottomNavIndex = 1; // switch to Home tab
+            });
+          }
         },
         child: const Icon(Icons.add),
         backgroundColor: Colors.green,
