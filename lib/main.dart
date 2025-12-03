@@ -1,3 +1,4 @@
+import 'package:fins/database/db_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
 
@@ -8,12 +9,22 @@ import 'pages/add_expense.dart';
 import 'pages/profile.dart';
 import 'pages/expense_model.dart';
 
+import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // <-- New Import
+import 'dart:io'; // <-- New Import
+
 /*
 ===============
   ENTRY POINT
 ===============
 */ 
 void main() {
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    // Initialize FFI database factory for desktop
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+  // This line is good practice for Flutter startup
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -70,6 +81,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     ];
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       // Light blue/grey background from wireframe
       backgroundColor: const Color(0xFFF5F7FA), 
       body: pages[_bottomNavIndex],
@@ -88,6 +100,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
             );
 
             if (newExpense != null && newExpense is Expense) {
+              // Add database
+              await DBHelper().insertExpense(newExpense);
               setState(() {
                 // Add the new expense to the shared static list
                 HomePage.expenses.add(newExpense); 
@@ -107,18 +121,22 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       
-      bottomNavigationBar: AnimatedBottomNavigationBar(
-        icons: iconList,
-        activeIndex: _bottomNavIndex,
-        gapLocation: GapLocation.center,
-        notchSmoothness: NotchSmoothness.softEdge,
-        leftCornerRadius: 32,
-        rightCornerRadius: 32,
-        activeColor: const Color(0xFF5E6C85),
-        inactiveColor: Colors.grey,
-        // Update the state (selected index) when tapping a tab
-        onTap: (index) {
-          setState(() => _bottomNavIndex = index);
+      bottomNavigationBar: LayoutBuilder(
+        builder: (BuildContext innerContext, BoxConstraints constraints) {
+          return AnimatedBottomNavigationBar(
+            icons: iconList,
+            activeIndex: _bottomNavIndex,
+            gapLocation: GapLocation.center,
+            notchSmoothness: NotchSmoothness.softEdge,
+            leftCornerRadius: 32,
+            rightCornerRadius: 32,
+            activeColor: const Color(0xFF5E6C85),
+            inactiveColor: Colors.grey,
+            // Update the state (selected index) when tapping a tab
+            onTap: (index) {
+              setState(() => _bottomNavIndex = index);
+            },
+          );
         },
       ),
     );
