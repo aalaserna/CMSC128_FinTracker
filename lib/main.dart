@@ -23,9 +23,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: const ExpenseHomePage(),
+      home: ExpenseHomePage(),
     );
   }
 }
@@ -45,34 +45,41 @@ class ExpenseHomePage extends StatefulWidget {
 }
 
 class _ExpenseHomePageState extends State<ExpenseHomePage> {
-  // Track selected tab: 1 means Home Tab is selected first
+  // Track selected tab: 1 means Home Tab is selected first (index 1 is 'home')
   int _bottomNavIndex = 1;
+
+  // The master list is now static inside HomePage, so this list is removed:
+  // final List<Expense> myExpenses = []; 
 
   final iconList = <IconData>[
     Icons.bar_chart,
     Icons.home,
     Icons.settings,
-    Icons.person, // dummy
+    Icons.person,
   ];
 
   @override
   Widget build(BuildContext context) {
-    // List of all the screens
+    // List of all the screens. HomePage must be instantiated with its static key
+    // so its state (like the selected date) can be accessed from the FAB.
     final pages = <Widget>[
       const SummaryPage(),
       HomePage(key: HomePage.homePageStateKey),
       const CustomizationPage(),
-      const ProfilePage(), // dummy
+      const ProfilePage(), 
     ];
 
     return Scaffold(
+      // Light blue/grey background from wireframe
+      backgroundColor: const Color(0xFFF5F7FA), 
       body: pages[_bottomNavIndex],
       // Code for the add button
       floatingActionButton: FloatingActionButton(
+        shape: const CircleBorder(), // <--- Makes the button perfectly round
         onPressed: () async {
           // Check if we are in Home Page
           if (_bottomNavIndex == 1) {
-            // Get the currently selected date from the HomePage State
+            // Get the currently selected date from the HomePage State via the GlobalKey
             final selectedDate = HomePage.homePageStateKey.currentState?.getSelectedDate() ?? DateTime.now();
             
             final newExpense = await Navigator.push(
@@ -80,30 +87,35 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
               MaterialPageRoute(builder: (_) => AddExpensePage(initialDate: selectedDate)),
             );
 
-            if (newExpense != null) {
+            if (newExpense != null && newExpense is Expense) {
               setState(() {
-                HomePage.expenses.add(newExpense); // rebuild HomePage
-                _bottomNavIndex = 1; // switch to Home tab
+                // Add the new expense to the shared static list
+                HomePage.expenses.add(newExpense); 
+                // Switch back to the Home tab to see the change
+                _bottomNavIndex = 1; 
               });
             }
           } else {
             /* If user presses the floating action btn while on another tab,
-              Default to Home Page
-            */
+               Default to Home Page
+             */
             setState(() => _bottomNavIndex = 1);
           }
         },
-        child: const Icon(Icons.add),
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF5E6C85), // Wireframe blue color
+        child: const Icon(Icons.add, color: Colors.white),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      
       bottomNavigationBar: AnimatedBottomNavigationBar(
         icons: iconList,
         activeIndex: _bottomNavIndex,
         gapLocation: GapLocation.center,
-        notchSmoothness: NotchSmoothness.verySmoothEdge,
+        notchSmoothness: NotchSmoothness.softEdge,
         leftCornerRadius: 32,
         rightCornerRadius: 32,
+        activeColor: const Color(0xFF5E6C85),
+        inactiveColor: Colors.grey,
         // Update the state (selected index) when tapping a tab
         onTap: (index) {
           setState(() => _bottomNavIndex = index);
