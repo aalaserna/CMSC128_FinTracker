@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz; 
 import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 
@@ -11,11 +14,16 @@ class CustomizationPage extends StatefulWidget {
 }
 
 class _CustomizationPageState extends State<CustomizationPage> {
+  //Notification Plugin Instance 
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = 
+    FlutterLocalNotificationsPlugin(); 
+
   // State variables for customization options
   String _budgetAmount = ''; // Budget text input
   String _selectedBudgetFrequency = 'Weekly'; 
   String _selectedReminderFrequency = 'Daily';
   TimeOfDay _selectedTime = const TimeOfDay(hour: 20, minute: 0); // Default to 8:00 PM
+  bool _notificationsEnabled = true; 
 
   // Lists for dropdown options
   final List<String> _budgetFrequencies = ['Weekly', 'Monthly'];
@@ -24,13 +32,121 @@ class _CustomizationPageState extends State<CustomizationPage> {
   // Text controller for the budget input field
   final TextEditingController _budgetController = TextEditingController();
 
+  @override 
+  void initState() {
+    super.initState();
+    tz.initializeTimeZones();
+    _initializeNotifications(); 
+  }
+
   @override
   void dispose() {
     _budgetController.dispose();
     super.dispose();
   }
 
-  // Function to show the time picker dialog
+  //Notifications 
+  void _initializeNotifications() async { 
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+    );
+
+    // Initialize the plugin
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) async {
+        print('Notification tapped with payload: ${response.payload}');
+      },
+    );
+  }
+
+  //Notification schedule 
+  Future<void> _scheduleReminder() async {
+    await flutterLocalNotificationsPlugin.cancelAll();
+     // 2. Define the notification details for Android
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'expense_reminder_channel_id', // Unique channel ID
+      'Expense Tracking Reminders', // Channel name
+      channelDescription: 'Reminders to log expenses based on user frequency.',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidDetails,
+    );
+
+    // 3. Set the Time Zone
+    // We use tz.local which represents the device's current time zone.
+    final now = tz.TZDateTime.now(tz.local);
+    
+    // 4. Calculate the next exact time for the reminder
+    var nextSchedule = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
+
+    // If the selected time is already past today, schedule it for the next appropriate period (e.g., tomorrow)
+    if (nextSchedule.isBefore(now)) {
+      nextSchedule = nextSchedule.add(const Duration(days: 1));
+    }
+    
+    // 5. Define notification content
+    const String title = 'Time to Track Your Expenses!';
+    const String body = 'Don\'t forget to log your recent expenses to stay within your budget.';
+
+    // 6. Schedule the notification based on frequency
+    DateTimeComponents matchComponents;
+    int notificationId = 0;
+    
+    if (_selectedReminderFrequency == 'Daily') {
+      matchComponents = DateTimeComponents.time; // Repeat at the same time every day
+      notificationId = 100;
+      
+    } else if (_selectedReminderFrequency == 'Weekly') {
+      matchComponents = DateTimeComponents.dayOfWeekAndTime; // Repeat on the same day/time every week
+      notificationId = 200;
+      
+    } else if (_selectedReminderFrequency == 'Monthly') {
+      matchComponents = DateTimeComponents.dayOfMonthAndTime; // Repeat on the same day/time every month
+      notificationId = 300;
+      
+    } else {
+      // Default to one-time notification if frequency is somehow invalid
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        0, 
+        title, 
+        body, 
+        nextSchedule, 
+        notificationDetails, 
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      );
+      print('One-time reminder scheduled.');
+      return;
+    }
+
+    // Schedule the repeating notification
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      notificationId,
+      title,
+      body,
+      nextSchedule,
+      notificationDetails,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: matchComponents, 
+    );
+    print('${_selectedReminderFrequency} reminder scheduled for ${_selectedTime.format(context)}');
+  }
+
+  // Function to show the time picker dialog (same as before)
   Future<void> _selectTime(BuildContext context) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
@@ -51,7 +167,28 @@ class _CustomizationPageState extends State<CustomizationPage> {
     prefs.setBool("isFirstTime", false); // mark setup completed
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Customizations saved successfully!')),
+        SnackBar(content: Text('${pendingRequests.length} pending notifications found (Check console)')),
+      );
+  } 
+
+  // NEW: Helper widget for the notification toggle switch
+  Widget _buildNotificationToggle() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          'Enable Expense Reminders',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        Switch(
+          value: _notificationsEnabled,
+          onChanged: (bool newValue) {
+            setState(() {
+              _notificationsEnabled = newValue;
+            }); 
+          },
+        ),
+      ],
     );
 
     Navigator.pushReplacement(
@@ -100,6 +237,12 @@ class _CustomizationPageState extends State<CustomizationPage> {
               ),
               const SizedBox(height: 20),
 
+              const Divider(height: 30),
+
+              // --- NOTIFICATION TOGGLE ---
+              _buildNotificationToggle(),
+              const SizedBox(height: 20), 
+
               // --- 3. Set Your Reminder Frequency ---
               _buildSectionTitle('Set your reminder frequency'),
               _buildReminderRow(context),
@@ -121,6 +264,12 @@ class _CustomizationPageState extends State<CustomizationPage> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
+              // TEMPORARY: Button to check pending notifications
+              TextButton(
+                onPressed: _checkPendingNotifications,
+                child: const Text('Check Pending Reminders (For Testing)'),
+              ),
+              // END TEMPORARY
             ],
           ),
         ),
