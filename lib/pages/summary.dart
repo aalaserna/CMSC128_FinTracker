@@ -134,7 +134,7 @@ class SummaryPage extends StatelessWidget {
     final DateTime end = summary['endOfWeek'];
     
     // Format dates for display
-    final dateFormatter = (DateTime date) => 
+    String dateFormatter(DateTime date) => 
       '${date.month}/${date.day}';
     
     // Prepare data for the Pie Chart
