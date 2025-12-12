@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../main.dart';
+
 
 class CustomizationPage extends StatefulWidget {
   const CustomizationPage({super.key});
@@ -41,22 +44,22 @@ class _CustomizationPageState extends State<CustomizationPage> {
   }
 
   // Function called when the Done button is pressed
-  void _saveCustomizations() {
-    // 1. Get the final budget amount
+  void _saveCustomizations() async {
     _budgetAmount = _budgetController.text;
 
-    // 2. Output the current settings (You would replace this with saving logic)
-    print('--- Customizations Saved ---');
-    print('Budget Amount: \$$_budgetAmount');
-    print('Budget Cycle: $_selectedBudgetFrequency');
-    print('Reminder Frequency: $_selectedReminderFrequency');
-    print('Reminder Time: ${_selectedTime.format(context)}');
-    
-    // In a real app, you would navigate away or save data to a database here.
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setBool("isFirstTime", false); // mark setup completed
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Customizations saved successfully!')),
     );
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const ExpenseHomePage()),
+    );
   }
+
 
   @override
   Widget build(BuildContext context) {

@@ -8,6 +8,9 @@ import 'pages/customizations.dart';
 import 'pages/add_expense.dart'; 
 import 'pages/profile.dart';
 import 'pages/expense_model.dart';
+import 'pages/landing.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // <-- New Import
 import 'dart:io'; // <-- New Import
@@ -34,11 +37,33 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: ExpenseHomePage(),
+      home: FutureBuilder<bool>(
+        future: _shouldShowLanding(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          final showLanding = snapshot.data ?? true;
+          if (showLanding) {
+            return const LandingPage();
+          }
+          return const ExpenseHomePage();
+        },
+      ),
     );
   }
+}
+
+Future<bool> _shouldShowLanding() async {
+  final prefs = await SharedPreferences.getInstance();
+  // Default to true on first run if not set
+  final isFirstTime = prefs.getBool('isFirstTime');
+  // Show landing if never set; after user proceeds from landing, they set this
+  return isFirstTime == null || isFirstTime == true;
 }
 
 /*
