@@ -86,10 +86,8 @@ Future<void> loadExpenses() async {
 
   void _deleteExpense(int index) async {
     final id = HomePage.expenses[index].id!;
-    if (id != null) {
-      await DBHelper().deleteExpense(id);
-    }
-    setState(() {
+    await DBHelper().deleteExpense(id);
+      setState(() {
       HomePage.expenses.removeAt(index);
     });
   }
@@ -155,7 +153,7 @@ Future<void> loadExpenses() async {
                     onChanged: (value) => amountText = value,
                   ),
                   DropdownButtonFormField<String>(
-                    value: ['transpo', 'food', 'education', 'wants'].contains(category) ? category : 'transpo',
+                    initialValue: ['transpo', 'food', 'education', 'wants'].contains(category) ? category : 'transpo',
                     items: const [
                       DropdownMenuItem(value: 'transpo', child: Text('Transpo')),
                       DropdownMenuItem(value: 'food', child: Text('Food')),
