@@ -6,10 +6,8 @@ class HomePage extends StatefulWidget {
   // and edit/delete operations call setState in the _HomePageState via this key/method.
   const HomePage({super.key});
 
-  // Permanent storage for every expense
+  static double userBudget = 0.0; 
   static final List<Expense> expenses = [];
-  
-  // REQUIRED: Global key to access state from outside (e.g., in main.dart's FAB)
   static final GlobalKey<_HomePageState> homePageStateKey = GlobalKey<_HomePageState>();
 
   @override
@@ -195,11 +193,40 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       detailsController.dispose();
     });
   }
+
+  String _getWeeklyTotal() {
+    double total = 0;
+    for (var expense in HomePage.expenses) {
+      bool isInWeek = weekDates.any((d) => _isSameDay(d, expense.date));
+      if (isInWeek) {
+        total += expense.amount;
+      }
+    }
+    return "₱${total.toStringAsFixed(2)}";
+  }
   
   String _getDayTotal(DateTime date) {
     final dayExpenses = HomePage.expenses.where((e) => _isSameDay(e.date, date)).toList();
     double total = dayExpenses.fold(0.0, (sum, e) => sum + e.amount);
     return "₱${total.toStringAsFixed(2)}";
+  }
+
+  double _calculateWeeklySpent() {
+    double total = 0.0;
+    for (var expense in HomePage.expenses) {
+      // Check if expense date is inside the current week list
+      bool isInWeek = weekDates.any((d) => _isSameDay(d, expense.date));
+      if (isInWeek) {
+        total += expense.amount;
+      }
+    }
+    return total;
+  }
+
+  String _getBalanceLeft() {
+    double spent = _calculateWeeklySpent();
+    double balance = HomePage.userBudget - spent;
+    return "₱${balance.toStringAsFixed(2)}"; 
   }
 
   @override
@@ -286,6 +313,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   Widget _buildDayPage(DateTime date) {
     final dayExpenses = HomePage.expenses.where((e) => _isSameDay(e.date, date)).toList();
     
+    final dayName = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][date.weekday - 1];
+    final dateString = "$dayName, ${date.day}";
+
     return Column(
       children: [
         // SUMMARY CARDS
@@ -294,12 +324,30 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildSummaryCard("Expenses", _getDayTotal(date)),
+              _buildSummaryCard("Weekly Expenses", "₱${_calculateWeeklySpent().toStringAsFixed(2)}"),
               const SizedBox(width: 8),
-              _buildSummaryCard("Balance Left", "₱12,000"), 
+              _buildSummaryCard("Balance Left", _getBalanceLeft()), 
               const SizedBox(width: 8),
               _buildSummaryCard("Savings", "₱12,000"), 
             ],
+          ),
+        ),
+
+        Container(
+          margin: const EdgeInsets.only(bottom: 15),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.grey[200], // Light grey background
+            borderRadius: BorderRadius.circular(20), // Pill shape
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Text(
+            "Daily Expense ($dateString): ${_getDayTotal(date)}",
+            style: TextStyle(
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
           ),
         ),
 
@@ -338,7 +386,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
   }
 
-  // Helper widget for the summary cards
+  // Helper widget for the summary cards2
   Widget _buildSummaryCard(String title, String amount) {
     return Expanded(
       child: Container(

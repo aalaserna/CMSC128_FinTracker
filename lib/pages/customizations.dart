@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'homepage.dart';
 
 class CustomizationPage extends StatefulWidget {
   const CustomizationPage({super.key});
@@ -42,9 +43,16 @@ class _CustomizationPageState extends State<CustomizationPage> {
 
   // Function called when the Done button is pressed
   void _saveCustomizations() {
-    // 1. Get the final budget amount
     _budgetAmount = _budgetController.text;
 
+    if (_budgetAmount.isNotEmpty) {
+      double? newBudget = double.tryParse(_budgetAmount);
+      if (newBudget != null) {
+        HomePage.userBudget = newBudget;
+      }
+    }
+
+    HomePage.homePageStateKey.currentState?.setState(() {});
     // 2. Output the current settings (You would replace this with saving logic)
     print('--- Customizations Saved ---');
     print('Budget Amount: \$$_budgetAmount');
@@ -56,6 +64,8 @@ class _CustomizationPageState extends State<CustomizationPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Customizations saved successfully!')),
     );
+
+    FocusScope.of(context).unfocus();
   }
 
   @override
