@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'expense_model.dart';
+import 'dart:core';
+import '../database/db_helper.dart';
 
 class HomePage extends StatefulWidget {
   // Note: The expenses list is managed statically now (HomePage.expenses)
@@ -26,6 +28,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   late String currentMonthName;
   late TabController _tabController;
 
+Future<void> loadExpenses() async {
+  final data = await DBHelper().getAllExpenses();
+  setState(() {
+    HomePage.expenses.clear();
+    HomePage.expenses.addAll(data);
+  });
+}
+
   // REQUIRED: Method to get the currently selected date, called by main.dart
   DateTime getSelectedDate() {
     return weekDates[_tabController.index];
@@ -44,7 +54,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
   
   @override
-  void initState() {
+  void initState(){
+    loadExpenses();
     super.initState();
     weekDates = _getCurrentWeekDates();
     
@@ -73,27 +84,41 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     super.dispose();
   }
 
-  // --- LOGIC: DELETE EXPENSE ---
-  void _deleteExpense(int index) {
+  void _deleteExpense(int index) async {
+    final id = HomePage.expenses[index].id!;
+    if (id != null) {
+      await DBHelper().deleteExpense(id);
+    }
     setState(() {
       HomePage.expenses.removeAt(index);
     });
   }
 
-  // --- LOGIC: EDIT EXPENSE ---
   void _editExpense(int index, String name, double amount, String category,
-      DateTime date, String details) {
-    setState(() {
-      HomePage.expenses[index] = Expense(
-        name: name,
-        amount: amount,
-        category: category,
-        date: date,
-        details: details,
-      );
-    });
-  }
+      DateTime date, String details) async {
+        final old = HomePage.expenses[index];
 
+      final updatedExpense = Expense(
+      id: old.id, // PRESERVE DATABASE ID
+      name: name,
+      amount: amount,
+      category: category,
+      date: date,
+      details: details,
+    );
+        
+   
+    // Update the database if the ID exists
+    if (updatedExpense.id != null) {
+      await DBHelper().updateExpense(updatedExpense);
+    }
+
+    // Update the in-memory list and trigger UI refresh
+    setState(() {
+      HomePage.expenses[index] = updatedExpense;
+    });        
+  }  
+             
   // Edit popup
   void _openEditExpenseDialog(int index) {
     Expense e = HomePage.expenses[index];
