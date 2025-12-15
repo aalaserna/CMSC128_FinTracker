@@ -116,6 +116,46 @@ class _HomePageState extends State<HomePage>
     });
   }
 
+  // Delete with 5-second undo toast/snackbar
+  void _deleteExpenseWithUndo(Expense item, int index) {
+    // Remove from UI immediately
+    setState(() {
+      HomePage.expenses.removeAt(index);
+    });
+
+    final messenger = ScaffoldMessenger.of(context);
+    bool undone = false;
+
+    messenger.hideCurrentSnackBar();
+    messenger
+        .showSnackBar(
+          SnackBar(
+            content: Text('Deleted "${item.name}"'),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () {
+                undone = true;
+                // Restore item at original position
+                setState(() {
+                  HomePage.expenses.insert(index, item);
+                });
+              },
+            ),
+          ),
+        )
+        .closed
+        .then((reason) async {
+          if (!undone) {
+            // Commit delete to DB only if not undone
+            final id = item.id;
+            if (id != null) {
+              await DBHelper().deleteExpense(id);
+            }
+          }
+        });
+  }
+
   void _editExpense(
     int index,
     String name,
@@ -513,7 +553,8 @@ class _HomePageState extends State<HomePage>
                           child: Icon(Icons.delete, color: Colors.white),
                         ),
                       ),
-                      onDismissed: (direction) => _deleteExpense(realIndex),
+                      onDismissed: (direction) =>
+                          _deleteExpenseWithUndo(item, realIndex),
                       child: _buildTransactionItem(item, realIndex),
                     );
                   },
