@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'expense_model.dart';
 import 'dart:core';
 import '../database/db_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   // Note: The expenses list is managed statically now (HomePage.expenses)
@@ -56,6 +57,7 @@ Future<void> loadExpenses() async {
     loadExpenses();
     super.initState();
     weekDates = _getCurrentWeekDates();
+    _loadBudget();
     
     final now = DateTime.now();
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -74,6 +76,16 @@ Future<void> loadExpenses() async {
         setState(() {});
       }
     });
+  }
+
+  Future<void> _loadBudget() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getDouble('budgetAmount');
+    if (saved != null) {
+      setState(() {
+        HomePage.userBudget = saved;
+      });
+    }
   }
 
   @override

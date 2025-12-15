@@ -167,7 +167,18 @@ class _CustomizationPageState extends State<CustomizationPage> {
   void _saveCustomizations() async {
     _budgetAmount = _budgetController.text;
 
+    // Validate and persist budget & cycle
+    final parsedBudget = double.tryParse(_budgetAmount);
+    if (parsedBudget == null || parsedBudget < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid budget amount.')),
+      );
+      return;
+    }
+
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('budgetAmount', parsedBudget);
+    await prefs.setString('budgetCycle', _selectedBudgetFrequency); // 'Weekly' | 'Monthly'
     prefs.setBool("isFirstTime", false); // mark setup completed
     // Optionally (re)schedule reminders based on current settings
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS || Platform.isLinux) {
