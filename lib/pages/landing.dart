@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 import 'customizations.dart';
+import 'homepage.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -47,14 +48,47 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
   }
 
   Future<void> _startApp(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool("isLoggedIn", true);
-    await prefs.setBool("isFirstTime", true);
+    final goToCustomization = await _shouldShowCustomization();
+    if (goToCustomization) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const CustomizationPage()),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const ExpenseHomePage()),
+      );
+    }
+  }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const CustomizationPage()),
-    );
+  Future<bool> _shouldShowCustomization() async {
+    final prefs = await SharedPreferences.getInstance();
+    final budget = prefs.getDouble('budgetAmount');
+    final cycle = prefs.getString('budgetCycle') ?? 'Weekly';
+    final startMs = prefs.getInt('cycleStartEpochMs');
+
+    // No budget configured yet → ask user to configure
+    if (budget == null || budget <= 0) return true;
+
+    // If we have a budget but no recorded start, record now and continue to app
+    if (startMs == null) {
+      await prefs.setInt('cycleStartEpochMs', DateTime.now().millisecondsSinceEpoch);
+      return false;
+    }
+
+    final start = DateTime.fromMillisecondsSinceEpoch(startMs);
+    final now = DateTime.now();
+    DateTime nextStart;
+    if (cycle == 'Monthly') {
+      nextStart = DateTime(start.year, start.month + 1, start.day);
+    } else {
+      // Default weekly
+      nextStart = start.add(const Duration(days: 7));
+    }
+
+    // If we've reached or passed the next cycle start, prompt customization
+    return !now.isBefore(nextStart);
   }
 
   @override

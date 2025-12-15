@@ -2,26 +2,25 @@ import 'package:flutter/material.dart';
 import 'expense_model.dart';
 import 'dart:async';
 import '../database/db_helper.dart';
-// import 'package:fluttertoast/fluttertoast.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   // Note: The expenses list is managed statically now (HomePage.expenses)
   // and edit/delete operations call setState in the _HomePageState via this key/method.
   const HomePage({super.key});
 
-  // Permanent storage for every expense
+  static double userBudget = 0.0;
   static final List<Expense> expenses = [];
-  
-  // REQUIRED: Global key to access state from outside (e.g., in main.dart's FAB)
-  static final GlobalKey<_HomePageState> homePageStateKey = GlobalKey<_HomePageState>();
+  static final GlobalKey<_HomePageState> homePageStateKey =
+      GlobalKey<_HomePageState>();
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 // Set up a stateful widget with mixing for animation control (for TabController)
-class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
-  
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
   final Color kBlueLight = const Color(0xFFDCE8F5);
   final Color kSelectedBlue = const Color(0xFF5E6C85);
 
@@ -29,13 +28,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   late String currentMonthName;
   late TabController _tabController;
 
-Future<void> loadExpenses() async {
-  final data = await DBHelper().getAllExpenses();
-  setState(() {
-    HomePage.expenses.clear();
-    HomePage.expenses.addAll(data);
-  });
-}
+  Future<void> loadExpenses() async {
+    final data = await DBHelper().getAllExpenses();
+    setState(() {
+      HomePage.expenses.clear();
+      HomePage.expenses.addAll(data);
+    });
+  }
 
   // REQUIRED: Method to get the currently selected date, called by main.dart
   DateTime getSelectedDate() {
@@ -53,21 +52,35 @@ Future<void> loadExpenses() async {
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
-  
+
   @override
-  void initState(){
+  void initState() {
     loadExpenses();
     super.initState();
     weekDates = _getCurrentWeekDates();
-    
+    _loadBudget();
+
     final now = DateTime.now();
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
     currentMonthName = months[now.month - 1];
 
     // Find today's index (0-6) and initialize TabController
-    int todayIndex = now.weekday - 1; 
+    int todayIndex = now.weekday - 1;
     _tabController = TabController(
-      length: weekDates.length, 
+      length: weekDates.length,
       vsync: this,
       initialIndex: todayIndex,
     );
@@ -79,17 +92,41 @@ Future<void> loadExpenses() async {
     });
   }
 
+  Future<void> _loadBudget() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getDouble('budgetAmount');
+    if (saved != null) {
+      setState(() {
+        HomePage.userBudget = saved;
+      });
+    }
+  }
+
   @override
   void dispose() {
-    _tabController.dispose(); 
+    _tabController.dispose();
     super.dispose();
   }
 
-  void _editExpense(int index, String name, double amount, String category,
-      DateTime date, String details) async {
-        final old = HomePage.expenses[index];
+  void _deleteExpense(int index) async {
+    final id = HomePage.expenses[index].id!;
+    await DBHelper().deleteExpense(id);
+    setState(() {
+      HomePage.expenses.removeAt(index);
+    });
+  }
 
-      final updatedExpense = Expense(
+  void _editExpense(
+    int index,
+    String name,
+    double amount,
+    String category,
+    DateTime date,
+    String details,
+  ) async {
+    final old = HomePage.expenses[index];
+
+    final updatedExpense = Expense(
       id: old.id, // PRESERVE DATABASE ID
       name: name,
       amount: amount,
@@ -97,8 +134,7 @@ Future<void> loadExpenses() async {
       date: date,
       details: details,
     );
-        
-   
+
     // Update the database if the ID exists
     if (updatedExpense.id != null) {
       await DBHelper().updateExpense(updatedExpense);
@@ -107,103 +143,141 @@ Future<void> loadExpenses() async {
     // Update the in-memory list and trigger UI refresh
     setState(() {
       HomePage.expenses[index] = updatedExpense;
-    });        
-  }  
-             
+    });
+  }
+
   // Edit popup
   void _openEditExpenseDialog(int index) {
     Expense e = HomePage.expenses[index];
     String name = e.name;
-    String amountText = e.amount.toStringAsFixed(2); 
+    String amountText = e.amount.toStringAsFixed(2);
     String category = e.category;
     String details = e.details;
     DateTime selectedDate = e.date;
-    
+
     final nameController = TextEditingController(text: name);
     final amountController = TextEditingController(text: amountText);
     final detailsController = TextEditingController(text: details);
 
-
     showDialog(
       context: context,
       builder: (context) {
-        return StatefulBuilder(builder: (context, setStateDialog) {
-          return AlertDialog(
-            title: const Text('Edit Expense'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Expense Name'),
-                    controller: nameController,
-                    onChanged: (value) => name = value,
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Amount'),
-                    controller: amountController,
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) => amountText = value,
-                  ),
-                  DropdownButtonFormField<String>(
-                    initialValue: ['transpo', 'food', 'education', 'wants'].contains(category) ? category : 'transpo',
-                    items: const [
-                      DropdownMenuItem(value: 'transpo', child: Text('Transpo')),
-                      DropdownMenuItem(value: 'food', child: Text('Food')),
-                      DropdownMenuItem(value: 'education', child: Text('Education')),
-                      DropdownMenuItem(value: 'wants', child: Text('Wants')),
-                    ],
-                    onChanged: (String? value) {
-                      if (value != null) setStateDialog(() => category = value);
-                    },
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Details'),
-                    controller: detailsController,
-                    onChanged: (value) => details = value,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Text('Date: ${selectedDate.toLocal().toString().split(' ')[0]}'),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () async {
-                          final pickedDate = await showDatePicker(
-                            context: context,
-                            initialDate: selectedDate,
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2100),
-                          );
-                          if (pickedDate != null) {
-                            setStateDialog(() => selectedDate = pickedDate);
-                          }
-                        },
-                        child: const Text('Select Date'),
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Edit Expense'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Expense Name',
                       ),
-                    ],
-                  ),
-                ],
+                      controller: nameController,
+                      onChanged: (value) => name = value,
+                    ),
+                    TextField(
+                      decoration: const InputDecoration(labelText: 'Amount'),
+                      controller: amountController,
+                      keyboardType: TextInputType.number,
+                      onChanged: (value) => amountText = value,
+                    ),
+                    DropdownButtonFormField<String>(
+                      initialValue:
+                          [
+                            'transpo',
+                            'food',
+                            'education',
+                            'wants',
+                          ].contains(category)
+                          ? category
+                          : 'transpo',
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'transpo',
+                          child: Text('Transpo'),
+                        ),
+                        DropdownMenuItem(value: 'food', child: Text('Food')),
+                        DropdownMenuItem(
+                          value: 'education',
+                          child: Text('Education'),
+                        ),
+                        DropdownMenuItem(value: 'wants', child: Text('Wants')),
+                      ],
+                      onChanged: (String? value) {
+                        if (value != null)
+                          setStateDialog(() => category = value);
+                      },
+                    ),
+                    TextField(
+                      decoration: const InputDecoration(labelText: 'Details'),
+                      controller: detailsController,
+                      onChanged: (value) => details = value,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Text(
+                          'Date: ${selectedDate.toLocal().toString().split(' ')[0]}',
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () async {
+                            final pickedDate = await showDatePicker(
+                              context: context,
+                              initialDate: selectedDate,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (pickedDate != null) {
+                              setStateDialog(() => selectedDate = pickedDate);
+                            }
+                          },
+                          child: const Text('Select Date'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  final double? amount = double.tryParse(amountController.text);
-                  if (nameController.text.isNotEmpty && amount != null) {
-                    _editExpense(index, nameController.text, amount, category, selectedDate, detailsController.text);
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text('Save'),
-              ),
-            ],
-          );
-        });
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final double? amount = double.tryParse(
+                      amountController.text,
+                    );
+                    if (nameController.text.isNotEmpty &&
+                        amount != null &&
+                        amount > 0) {
+                      _editExpense(
+                        index,
+                        nameController.text,
+                        amount,
+                        category,
+                        selectedDate,
+                        detailsController.text,
+                      );
+                      Navigator.pop(context);
+                    } else {
+                      // simple feedback if invalid
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please enter a positive amount.'),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
       },
     ).then((_) {
       nameController.dispose();
@@ -211,11 +285,49 @@ Future<void> loadExpenses() async {
       detailsController.dispose();
     });
   }
-  
+
+  String _getWeeklyTotal() {
+    double total = 0;
+    for (var expense in HomePage.expenses) {
+      bool isInWeek = weekDates.any((d) => _isSameDay(d, expense.date));
+      if (isInWeek) {
+        total += expense.amount;
+      }
+    }
+    return "₱${total.toStringAsFixed(2)}";
+  }
+
   String _getDayTotal(DateTime date) {
-    final dayExpenses = HomePage.expenses.where((e) => _isSameDay(e.date, date)).toList();
+    final dayExpenses = HomePage.expenses
+        .where((e) => _isSameDay(e.date, date))
+        .toList();
     double total = dayExpenses.fold(0.0, (sum, e) => sum + e.amount);
     return "₱${total.toStringAsFixed(2)}";
+  }
+
+  double _calculateWeeklySpent() {
+    double total = 0.0;
+    for (var expense in HomePage.expenses) {
+      // Check if expense date is inside the current week list
+      bool isInWeek = weekDates.any((d) => _isSameDay(d, expense.date));
+      if (isInWeek) {
+        total += expense.amount;
+      }
+    }
+    return total;
+  }
+
+  String _getBalanceLeft() {
+    double spent = _calculateWeeklySpent();
+    double balance = HomePage.userBudget - spent;
+    return "₱${balance.toStringAsFixed(2)}";
+  }
+
+  String _getSavings() {
+    double spent = _calculateWeeklySpent();
+    double savings = HomePage.userBudget - spent;
+    if (savings < 0) savings = 0;
+    return "₱${savings.toStringAsFixed(2)}";
   }
 
   @override
@@ -227,7 +339,10 @@ Future<void> loadExpenses() async {
         elevation: 0,
         title: Text(
           currentMonthName,
-          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),
@@ -237,13 +352,21 @@ Future<void> loadExpenses() async {
           Container(
             margin: const EdgeInsets.symmetric(vertical: 10),
             height: 90,
-            padding: const EdgeInsets.symmetric(horizontal: 8), 
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               children: weekDates.asMap().entries.map((entry) {
                 final index = entry.key;
                 final date = entry.value;
-                final dayName = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][date.weekday - 1];
-                
+                final dayName = [
+                  'Mon',
+                  'Tue',
+                  'Wed',
+                  'Thu',
+                  'Fri',
+                  'Sat',
+                  'Sun',
+                ][date.weekday - 1];
+
                 bool isSelected = _tabController.index == index;
 
                 return Expanded(
@@ -252,29 +375,33 @@ Future<void> loadExpenses() async {
                       _tabController.animateTo(index);
                     },
                     child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4), 
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
-                        color: isSelected ? kSelectedBlue : const Color(0xFFE0E0E0).withOpacity(0.5),
+                        color: isSelected
+                            ? kSelectedBlue
+                            : const Color(0xFFE0E0E0).withOpacity(0.5),
                         borderRadius: BorderRadius.circular(25),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            dayName, 
+                            dayName,
                             style: TextStyle(
-                              fontSize: 11, 
-                              color: isSelected ? Colors.white70 : Colors.grey
-                            )
+                              fontSize: 11,
+                              color: isSelected ? Colors.white70 : Colors.grey,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            date.day.toString(), 
+                            date.day.toString(),
                             style: TextStyle(
-                              fontSize: 16, 
-                              fontWeight: FontWeight.bold, 
-                              color: isSelected ? Colors.white : Colors.grey[700]
-                            )
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.grey[700],
+                            ),
                           ),
                         ],
                       ),
@@ -300,39 +427,77 @@ Future<void> loadExpenses() async {
 
   // Widget responsible for showing summary cards and the list of expenses for a specific day
   Widget _buildDayPage(DateTime date) {
-    final dayExpenses = HomePage.expenses.where((e) => _isSameDay(e.date, date)).toList();
-    
+    final dayExpenses = HomePage.expenses
+        .where((e) => _isSameDay(e.date, date))
+        .toList();
+
+    final dayName = [
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+      'Sun',
+    ][date.weekday - 1];
+    final dateString = "$dayName, ${date.day}";
+
     return Column(
       children: [
         // SUMMARY CARDS
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0), // Added vertical padding
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16.0,
+            vertical: 8.0,
+          ), // Added vertical padding
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildSummaryCard("Expenses", _getDayTotal(date)),
+              _buildSummaryCard(
+                "Weekly Expenses",
+                "₱${_calculateWeeklySpent().toStringAsFixed(2)}",
+              ),
               const SizedBox(width: 8),
-              _buildSummaryCard("Balance Left", "₱12,000"), 
+              _buildSummaryCard("Balance Left", _getBalanceLeft()),
               const SizedBox(width: 8),
-              _buildSummaryCard("Savings", "₱12,000"), 
+              _buildSummaryCard("Savings", _getSavings()),
             ],
           ),
         ),
 
-        const SizedBox(height: 10), 
+        Container(
+          margin: const EdgeInsets.only(bottom: 15),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.grey[200], // Light grey background
+            borderRadius: BorderRadius.circular(20), // Pill shape
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Text(
+            "Daily Expense ($dateString): ${_getDayTotal(date)}",
+            style: TextStyle(
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 10), // Reduced spacing slightly
 
         Expanded(
           child: dayExpenses.isEmpty
               ? Center(
                   child: Text(
-                    "No expenses for ${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][date.weekday - 1]}.",
+                    "No expenses for ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][date.weekday - 1]}.",
                     style: TextStyle(color: Colors.grey[400], fontSize: 16),
                   ),
                 )
               : ListView.separated(
-                  padding: const EdgeInsets.only(bottom: 80), 
+                  padding: const EdgeInsets.only(bottom: 80),
                   itemCount: dayExpenses.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final item = dayExpenses[index];
                     final realIndex = HomePage.expenses.indexOf(item);
@@ -340,43 +505,15 @@ Future<void> loadExpenses() async {
                     return Dismissible(
                       key: UniqueKey(),
                       direction: DismissDirection.endToStart,
-                      confirmDismiss: (direction) async {
-                        final completer = Completer<bool>();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                const Expanded(child: Text('Expense deleted')),
-                                TextButton(
-                                  onPressed: () {
-                                    completer.complete(false); // Don't dismiss
-                                  },
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: kSelectedBlue,
-                                    textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  child: const Text('Undo'),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ).closed.then((reason) {
-                          if (reason != SnackBarClosedReason.action) {
-                            completer.complete(true); // Dismiss and delete
-                            final deletedExpense = HomePage.expenses[realIndex];
-                            final id = deletedExpense.id!;
-                            DBHelper().deleteExpense(id);
-                            setState(() {
-                              HomePage.expenses.removeAt(realIndex);
-                            });
-                          }
-                        });
-                        return completer.future;
-                      },
-                      background: Container(color: Colors.redAccent, alignment: Alignment.centerRight, child: const Padding(
-                        padding: EdgeInsets.only(right: 20.0),
-                        child: Icon(Icons.delete, color: Colors.white),
-                      )),
+                      background: Container(
+                        color: Colors.redAccent,
+                        alignment: Alignment.centerRight,
+                        child: const Padding(
+                          padding: EdgeInsets.only(right: 20.0),
+                          child: Icon(Icons.delete, color: Colors.white),
+                        ),
+                      ),
+                      onDismissed: (direction) => _deleteExpense(realIndex),
                       child: _buildTransactionItem(item, realIndex),
                     );
                   },
@@ -386,7 +523,7 @@ Future<void> loadExpenses() async {
     );
   }
 
-  // Helper widget for the summary cards
+  // Helper widget for the summary cards2
   Widget _buildSummaryCard(String title, String amount) {
     return Expanded(
       child: Container(
@@ -397,9 +534,23 @@ Future<void> loadExpenses() async {
         ),
         child: Column(
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black87)),
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                color: Colors.black87,
+              ),
+            ),
             const SizedBox(height: 5),
-            Text(amount, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey[700])),
+            Text(
+              amount,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Colors.grey[700],
+              ),
+            ),
           ],
         ),
       ),
@@ -444,21 +595,40 @@ Future<void> loadExpenses() async {
           const SizedBox(width: 12),
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Icon(icon, color: iconColor),
           ),
           const SizedBox(width: 12),
-          Expanded( 
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(item.category.toUpperCase(), style: TextStyle(color: Colors.blueGrey[300], fontSize: 10)),
+                Text(
+                  item.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  item.category.toUpperCase(),
+                  style: TextStyle(color: Colors.blueGrey[300], fontSize: 10),
+                ),
               ],
             ),
           ),
           const Spacer(),
-          Text("-₱${item.amount.toStringAsFixed(2)}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.redAccent)),
+          Text(
+            "-₱${item.amount.toStringAsFixed(2)}",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Colors.redAccent,
+            ),
+          ),
         ],
       ),
     );

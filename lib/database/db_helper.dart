@@ -12,7 +12,7 @@ class DBHelper {
 
   Future<Database> initDB() async {
     final path = join(await getDatabasesPath(), 'expenses.db');
-
+    // print(path);
     return await openDatabase(
       path,
       version: 1,

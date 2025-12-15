@@ -49,10 +49,19 @@ class _AddExpensePageState extends State<AddExpensePage> {
                 decoration: const InputDecoration(labelText: 'Amount'),
                 keyboardType: TextInputType.number,
                 onChanged: (val) => amount = val,
-                validator: (val) =>
-                    val == null || double.tryParse(val) == null
-                        ? 'Enter valid amount'
-                        : null,
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Enter amount';
+                  }
+                  final parsed = double.tryParse(val.trim());
+                  if (parsed == null) {
+                    return 'Enter valid amount';
+                  }
+                  if (parsed <= 0) {
+                    return 'Amount must be positive';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField(
