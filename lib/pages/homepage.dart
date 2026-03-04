@@ -27,6 +27,7 @@ class _HomePageState extends State<HomePage>
   late List<DateTime> weekDates;
   late String currentMonthName;
   late TabController _tabController;
+  late DateTime _currentWeekStart; 
 
   Future<void> loadExpenses() async {
     final data = await DBHelper().getAllExpenses();
@@ -41,13 +42,17 @@ class _HomePageState extends State<HomePage>
     return weekDates[_tabController.index];
   }
 
-  // Calculates the dates for the current week, starting on Monday.
+  /*Calculates the dates for the current week, starting on Monday.
   List<DateTime> _getCurrentWeekDates() {
     final now = DateTime.now();
     // now.weekday is 1 (Mon) to 7 (Sun). Subtracting (now.weekday - 1) gets us to Monday.
     final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
     return List.generate(7, (i) => startOfWeek.add(Duration(days: i)));
-  }
+  }*/ 
+
+  List<DateTime> _getWeekDates(DateTime startOfWeek) {
+  return List.generate(7, (i) => startOfWeek.add(Duration(days: i)));
+} 
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
@@ -57,10 +62,13 @@ class _HomePageState extends State<HomePage>
   void initState() {
     loadExpenses();
     super.initState();
-    weekDates = _getCurrentWeekDates();
+    //weekDates = _getCurrentWeekDates();
+    final now = DateTime.now();
+    _currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
+    weekDates = _getWeekDates(_currentWeekStart);
     _loadBudget();
 
-    final now = DateTime.now();
+    //final now = DateTime.now();
     const months = [
       'January',
       'February',
@@ -395,61 +403,90 @@ class _HomePageState extends State<HomePage>
             height: 90,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
-              children: weekDates.asMap().entries.map((entry) {
-                final index = entry.key;
-                final date = entry.value;
-                final dayName = [
-                  'Mon',
-                  'Tue',
-                  'Wed',
-                  'Thu',
-                  'Fri',
-                  'Sat',
-                  'Sun',
-                ][date.weekday - 1];
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios, size: 18),
+                  onPressed: () {
+                    setState(() {
+                      _currentWeekStart =
+                          _currentWeekStart.subtract(const Duration(days: 7));
+                      weekDates = _getWeekDates(_currentWeekStart);
+                      _tabController.animateTo(0); // Reset to first day of the new week
+                    });
+                  },
+                ),
 
-                bool isSelected = _tabController.index == index;
+                Expanded(
+                  child: Row(
+                    children: weekDates.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final date = entry.value;
+                      final dayName = [
+                        'Mon',
+                        'Tue',
+                        'Wed',
+                        'Thu',
+                        'Fri',
+                        'Sat',
+                        'Sun',
+                      ][date.weekday - 1];
+                      
+                      bool isSelected = _tabController.index == index;
 
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      _tabController.animateTo(index);
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? kSelectedBlue
-                            : const Color(0xFFE0E0E0).withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            dayName,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isSelected ? Colors.white70 : Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            date.day.toString(),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                      return Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            _tabController.animateTo(index);
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
                               color: isSelected
-                                  ? Colors.white
-                                  : Colors.grey[700],
+                                  ? kSelectedBlue
+                                  : const Color(0xFFE0E0E0).withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  dayName,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isSelected ? Colors.white70 : Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  date.day.toString(),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.grey[700],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    }).toList(),
                   ),
-                );
-              }).toList(),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.arrow_forward_ios, size: 18),
+                  onPressed: () {
+                    setState(() {
+                      _currentWeekStart =
+                          _currentWeekStart.add(const Duration(days: 7));
+                      weekDates = _getWeekDates(_currentWeekStart);
+                      _tabController.animateTo(0);
+                    });
+                  },
+                ),
+              ],
             ),
           ),
           // --- Main Content Area (TabBarView) ---

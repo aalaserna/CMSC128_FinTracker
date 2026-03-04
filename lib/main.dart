@@ -22,7 +22,7 @@ import 'dart:io'; // <-- New Import
 ===============
 */ 
 void main() {
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS ) {
     // Initialize FFI database factory for desktop
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
