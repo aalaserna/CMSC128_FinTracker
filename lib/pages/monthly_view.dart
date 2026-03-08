@@ -22,7 +22,7 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
     _loadAllExpenses();
   }
 
-  // Fetch data from your database
+  // Fetch data from DB
   Future<void> _loadAllExpenses() async {
     final data = await DBHelper().getAllExpenses();
     setState(() {
@@ -30,7 +30,7 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
     });
   }
 
-  // DOt markers to show that there expenses on the given day
+  // Dot markers to show that there are expenses on the given day
   List<Expense> _getExpensesForDay(DateTime day) {
     return _allExpenses.where((expense) {
       return expense.date.year == day.year &&
@@ -39,14 +39,109 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
     }).toList();
   }
 
+  // Helper to map categories to specific colors
+  Color _getMarkerColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'transpo':
+        return Colors.blue.shade700;
+      case 'food':
+        return Colors.red.shade700;
+      case 'education':
+        return Colors.green.shade700;
+      case 'wants':
+        return Colors.purple.shade700;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  Widget _buildTransactionItem(Expense item) {
+    IconData icon;
+    Color iconColor;
+    switch (item.category.toLowerCase()) {
+      case 'transpo':
+        icon = Icons.directions_car_filled;
+        iconColor = Colors.blue.shade700;
+        break;
+      case 'food':
+        icon = Icons.fastfood;
+        iconColor = Colors.red.shade700;
+        break;
+      case 'education':
+        icon = Icons.school;
+        iconColor = Colors.green.shade700;
+        break;
+      case 'wants':
+        icon = Icons.shopping_bag;
+        iconColor = Colors.purple.shade700;
+        break;
+      default:
+        icon = Icons.attach_money;
+        iconColor = Colors.black;
+    }
+
+    
+    return Container(
+      color: const Color(0xFFECF3FA),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon, 
+              color: iconColor, 
+              size: 20),
+          ),
+          const SizedBox(width: 12),
+          
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  item.category.toUpperCase(),
+                  style: TextStyle(color: Colors.blueGrey[300], fontSize: 10),
+                ),
+              ],
+            ),
+          ),
+          const Spacer(),
+          Text(
+            "-₱${item.amount.toStringAsFixed(2)}",
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Colors.redAccent,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Displays the expenses depending which day the user tapped on the calendar
+    final selectedDayExpenses = _selectedDay != null ? _getExpensesForDay(_selectedDay!) : [];
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black), 
+        iconTheme: const IconThemeData(color: Colors.black),
         title: const Text(
           'Monthly View',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
@@ -59,44 +154,111 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
             color: Colors.white,
             child: TableCalendar<Expense>(
               firstDay: DateTime.utc(2020, 1, 1),
-              lastDay: DateTime.utc(2030, 12, 31),
+              lastDay: DateTime.utc(2070, 12, 31),
               focusedDay: _focusedDay,
               selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-              eventLoader: _getExpensesForDay, 
+              eventLoader: _getExpensesForDay,
               
               calendarStyle: const CalendarStyle(
                 selectedDecoration: BoxDecoration(
-                  color: Color(0xFF5E6C85), 
+                  color: Color.fromARGB(255, 157, 174, 204),
                   shape: BoxShape.circle,
                 ),
                 todayDecoration: BoxDecoration(
-                  color: Color(0xFFDCE8F5),
+                  color: Color.fromARGB(255, 220, 232, 245),
                   shape: BoxShape.circle,
                 ),
                 todayTextStyle: TextStyle(color: Colors.black),
               ),
               headerStyle: const HeaderStyle(
-                formatButtonVisible: false, 
+                formatButtonVisible: false,
                 titleCentered: true,
               ),
+              
+              // Custom Dots according to recorded expenses for the day
+              calendarBuilders: CalendarBuilders(
+                markerBuilder: (context, date, events) {
+                  if (events.isEmpty) return const SizedBox();
 
+                  // Limit to 3 dots, and check if we need a "+"
+                  const maxDots = 3;
+                  final showPlus = events.length > maxDots;
+                  final visibleEvents = events.take(maxDots).toList();
+
+                  return Positioned(
+                    bottom: 5, // Position the dots at the bottom of the cell
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+
+                        // Display up to 3 colored dots for recorded expenses
+                        ...visibleEvents.map((expense) => Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 1),
+                              height: 7,
+                              width: 7,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _getMarkerColor(expense.category),
+                              ),
+                            )),
+                        
+                        // Displays '+' if there are more than 3 expenses
+                        if (showPlus)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 1.0),
+                            child: Text(
+                              '+',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color.fromARGB(255, 77, 99, 111),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              
               onDaySelected: (selectedDay, focusedDay) {
                 setState(() {
                   _selectedDay = selectedDay;
-                  _focusedDay = focusedDay; 
+                  _focusedDay = focusedDay;
+                });
+              },
+
+              // This fires when swiping left/right to change the month, 
+              // or when tapping the chevrons in the header.  
+              onPageChanged: (focusedDay) {
+                setState(() {
+                  _focusedDay = focusedDay;
+                  _selectedDay = focusedDay;  // Selects the 1st day of the new month
                 });
               },
             ),
           ),
           const SizedBox(height: 16),
-          
+
+          // Recorded expenses for the selected day
           Expanded(
-            child: Center(
-              child: Text(
-                'Your total expenses for ${_selectedDay?.month}/${_selectedDay?.day} will go here.',
-                style: const TextStyle(color: Colors.grey),
+            child: selectedDayExpenses.isEmpty
+              ? Center(
+                child: Text(
+                  'No expenses for ${_selectedDay?.month}/${_selectedDay?.day}.',
+                  style: const TextStyle(
+                    color: Colors.grey, 
+                    fontSize: 16),
+                ),
+              )
+              : ListView.separated(
+                  itemCount: selectedDayExpenses.length,
+                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final item = selectedDayExpenses[index];
+                    return _buildTransactionItem(item);
+                  },
               ),
-            ),
           ),
         ],
       ),
