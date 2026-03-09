@@ -15,6 +15,16 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
   DateTime? _selectedDay;
   List<Expense> _allExpenses = [];
 
+  double _getMonthlyTotal() {
+    return _allExpenses.where((expense){return expense.date.year == _focusedDay.year && expense.date.month == _focusedDay.month;})
+                       .fold(0.0, (sum, e) => sum + e.amount);
+  }
+
+  double _getSelectedDayTotal() {
+    if (_selectedDay == null) return 0.0;
+    return _allExpensesForDay(_selectedDay!).fold(0.0, (sum, e) => sum + e.amount);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -147,7 +157,20 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        actions:[
+          IconButton(
+            icon: const Icon(Icons.today, color: Colors.black),
+            onPressed: () {
+              setState(() {
+                _focusedDay = DateTime.now();
+                _selectedDay = DateTime.now();
+              });
+            },
+          ),
+        ]
       ),
+        
+
       body: Column(
         children: [
           Container(
@@ -238,8 +261,37 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
               },
             ),
           ),
+          Padding(
+            padding: const
+            EdgeInsets.symmetric(vertical: 8),
+            child: Container()
+            padding: const
+            EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDCE8F5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              "Total spent this month: ₱${_getMonthlyTotal().toStringAsFixed(2)}",
+                style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+         ),
           const SizedBox(height: 16),
 
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              "Total for selected day: ₱${_getSelectedDayTotal().toStringAsFixed(2)}",
+                style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
           // Recorded expenses for the selected day
           Expanded(
             child: selectedDayExpenses.isEmpty
