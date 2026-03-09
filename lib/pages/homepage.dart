@@ -3,6 +3,7 @@ import 'expense_model.dart';
 import 'dart:async';
 import '../database/db_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'monthly_view.dart';
 
 class HomePage extends StatefulWidget {
   // Note: The expenses list is managed statically now (HomePage.expenses)
@@ -393,6 +394,23 @@ class _HomePageState extends State<HomePage>
           ),
         ),
         centerTitle: true,
+
+        actions: [ 
+          Container(
+            margin: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
+            child: IconButton(
+                  icon: const Icon(Icons.calendar_month, color: Colors.black),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MonthlyViewPage()),
+                    );
+                  },
+                ),
+          ),
+          
+        ]
       ),
       body: Column(
         children: [
