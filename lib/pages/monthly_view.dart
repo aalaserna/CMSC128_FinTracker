@@ -15,16 +15,6 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
   DateTime? _selectedDay;
   List<Expense> _allExpenses = [];
 
-  double _getMonthlyTotal() {
-    return _allExpenses.where((expense){return expense.date.year == _focusedDay.year && expense.date.month == _focusedDay.month;})
-                       .fold(0.0, (sum, e) => sum + e.amount);
-  }
-
-  double _getSelectedDayTotal() {
-    if (_selectedDay == null) return 0.0;
-    return _allExpensesForDay(_selectedDay!).fold(0.0, (sum, e) => sum + e.amount);
-  }
-
   @override
   void initState() {
     super.initState();
@@ -38,6 +28,20 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
     setState(() {
       _allExpenses = data;
     });
+  }
+
+  // Math Helpers
+  double _getMonthlyTotal() {
+    return _allExpenses
+        .where((expense) => 
+            expense.date.year == _focusedDay.year && 
+            expense.date.month == _focusedDay.month)
+        .fold(0.0, (sum, e) => sum + e.amount);
+  }
+
+  double _getSelectedDayTotal() {
+    if (_selectedDay == null) return 0.0;
+    return _getExpensesForDay(_selectedDay!).fold(0.0, (sum, e) => sum + e.amount);
   }
 
   // Dot markers to show that there are expenses on the given day
@@ -65,6 +69,40 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
     }
   }
 
+  Widget _buildSummaryCard(String title, String amount, Color bgColor) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              amount,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                color: Colors.grey[800],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTransactionItem(Expense item) {
     IconData icon;
     Color iconColor;
@@ -90,7 +128,6 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
         iconColor = Colors.black;
     }
 
-    
     return Container(
       color: const Color(0xFFECF3FA),
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -102,13 +139,9 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
               color: iconColor.withValues(alpha: 0.18),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon, 
-              color: iconColor, 
-              size: 20),
+            child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(width: 12),
-          
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,7 +176,6 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Displays the expenses depending which day the user tapped on the calendar
     final selectedDayExpenses = _selectedDay != null ? _getExpensesForDay(_selectedDay!) : [];
 
     return Scaffold(
@@ -157,7 +189,7 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        actions:[
+        actions: [
           IconButton(
             icon: const Icon(Icons.today, color: Colors.black),
             onPressed: () {
@@ -167,10 +199,8 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
               });
             },
           ),
-        ]
+        ],
       ),
-        
-
       body: Column(
         children: [
           Container(
@@ -209,12 +239,10 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
                   final visibleEvents = events.take(maxDots).toList();
 
                   return Positioned(
-                    bottom: 5, // Position the dots at the bottom of the cell
+                    bottom: 5,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-
-                        // Display up to 3 colored dots for recorded expenses
                         ...visibleEvents.map((expense) => Container(
                               margin: const EdgeInsets.symmetric(horizontal: 1),
                               height: 7,
@@ -224,8 +252,6 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
                                 color: _getMarkerColor(expense.category),
                               ),
                             )),
-                        
-                        // Displays '+' if there are more than 3 expenses
                         if (showPlus)
                           const Padding(
                             padding: EdgeInsets.only(left: 1.0),
@@ -252,57 +278,47 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
               },
 
               // This fires when swiping left/right to change the month, 
-              // or when tapping the chevrons in the header.  
+              // or when tapping the chevrons in the header.
               onPageChanged: (focusedDay) {
                 setState(() {
-                  _focusedDay = focusedDay;
-                  _selectedDay = focusedDay;  // Selects the 1st day of the new month
+                  _focusedDay = focusedDay; // Selects the 1st day of the new month
+                  _selectedDay = focusedDay;
                 });
               },
             ),
           ),
+          
           Padding(
-            padding: const
-            EdgeInsets.symmetric(vertical: 8),
-            child: Container()
-            padding: const
-            EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFDCE8F5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              "Total spent this month: ₱${_getMonthlyTotal().toStringAsFixed(2)}",
-                style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildSummaryCard(
+                  "Monthly Total",
+                  "₱${_getMonthlyTotal().toStringAsFixed(2)}",
+                  const Color(0xFFDCE8F5),
+                ),
+                const SizedBox(width: 12),
+                _buildSummaryCard(
+                  "Daily Total",
+                  "₱${_getSelectedDayTotal().toStringAsFixed(2)}",
+                  const Color(0xFFEAEAF4),
+                ),
+              ],
             ),
           ),
-         ),
-          const SizedBox(height: 16),
 
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              "Total for selected day: ₱${_getSelectedDayTotal().toStringAsFixed(2)}",
-                style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
-          // Recorded expenses for the selected day
           Expanded(
             child: selectedDayExpenses.isEmpty
               ? Center(
-                child: Text(
-                  'No expenses for ${_selectedDay?.month}/${_selectedDay?.day}.',
-                  style: const TextStyle(
-                    color: Colors.grey, 
-                    fontSize: 16),
-                ),
-              )
+                  child: Text(
+                    'No expenses for ${_selectedDay?.month}/${_selectedDay?.day}.',
+                    style: const TextStyle(
+                      color: Colors.grey, 
+                      fontSize: 16
+                    ),
+                  ),
+                )
               : ListView.separated(
                   itemCount: selectedDayExpenses.length,
                   separatorBuilder: (context, index) => const Divider(height: 1),
