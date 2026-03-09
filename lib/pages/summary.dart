@@ -14,10 +14,18 @@ class SummaryPage extends StatefulWidget {
 class _SummaryPageState extends State<SummaryPage> {
   List<Expense> _expenses = [];
   bool _isLoading = true;
+  late DateTime _selectedWeek;
+  List<DateTime> _availableWeeks = [];
+
 
   @override
   void initState() {
     super.initState();
+    
+    final now = DateTime.now();
+    final currentDate = DateTime(now.year, now.month, now.day);
+    _selectedWeek = currentDate.subtract(Duration(days: currentDate.weekday - 1));
+
     loadExpensesFromDB();
   }
 
@@ -25,42 +33,70 @@ class _SummaryPageState extends State<SummaryPage> {
     final db = DBHelper();
     final data = await db.getAllExpenses();
 
+    _generateAvailableWeeks();
+
     setState(() {
       _expenses = data;
       _isLoading = false;
     });
   }
 
-  /*
-  =======================================
-  Helper: calculate expenses for the week
-  =======================================
-  */
+  void _generateAvailableWeeks() {
+    final now = DateTime.now();
+    final currentDate = DateTime(now.year, now.month, now.day);
+
+  // Start of current week
+    final currentStartOfWeek =
+        currentDate.subtract(Duration(days: currentDate.weekday - 1));
+
+    final List<DateTime> weeks = [];
+    DateTime weekStart = currentStartOfWeek;
+
+    while (true) {
+      final weekEnd = weekStart.add(const Duration(days: 6));
+
+      final isInCurrentMonth =
+          weekStart.month == now.month ||
+          weekEnd.month == now.month;
+
+      if (!isInCurrentMonth) {
+        break;
+      }
+
+      weeks.add(weekStart);
+
+      weekStart = weekStart.subtract(const Duration(days: 7));
+    }
+
+    _availableWeeks = weeks.reversed.toList();
+  }
+
+  String _formatWeekRange(DateTime startOfWeek) {
+    final endOfWeek = startOfWeek.add(const Duration(days: 6));
+    return '${startOfWeek.month}/${startOfWeek.day} - ${endOfWeek.month}/${endOfWeek.day}';
+  }
+
 
   Map<String, dynamic> calculateWeeklySummary() {
+    final startOfWeek = DateTime(
+      _selectedWeek.year,
+      _selectedWeek.month,
+      _selectedWeek.day,
+    );
+
+    final endOfWeek = startOfWeek.add(
+      const Duration(days: 6, hours: 23, minutes: 59, seconds: 59),
+    );
+
     if (_expenses.isEmpty) {
       return {
         'total': 0.0,
         'categories': [],
-        'startOfWeek': DateTime.now(), // Included for display in the UI
-        'endOfWeek': DateTime.now(), // Included for display in the UI
+        'chartCategories': [],
+        'startOfWeek': startOfWeek,
+        'endOfWeek': endOfWeek,
       };
     }    
-
-    // ===== Determine Current Week's Date Range =====
-
-    // Today (with time component)
-    final now = DateTime.now();
-    
-    // 1. Calculate Start of the Week (Monday, 00:00:00)
-    // We normalize 'now' to midnight before calculating the start of the week.
-    // This is the CRUCIAL fix to ensure the date range is accurate regardless of time of day.
-    final todayMidnight = DateTime(now.year, now.month, now.day);
-    final startOfWeek = todayMidnight.subtract(Duration(days: now.weekday - 1));
-    
-    // 2. Calculate End of the Week (Sunday, 23:59:59)
-    final endOfWeek = startOfWeek.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
-
 
     // ===== Filter Expenses For Current Week =====
     final List<Expense> weeklyExpensesList = _expenses.where((e) {
@@ -122,11 +158,26 @@ class _SummaryPageState extends State<SummaryPage> {
 
   Color _getColorForCategory(String category) {
     switch (category.toLowerCase()) {
-      case 'food': return Colors.yellow.shade600;
-      case 'education': return Colors.blue.shade600;
-      case 'transpo': return Colors.red.shade600;
+      case 'food': return const Color.fromARGB(255, 253, 53, 53);
+      case 'education': return const Color.fromARGB(255, 25, 113, 0);
+      case 'transpo': return const Color.fromARGB(255, 53, 73, 229);
       case 'wants': return Colors.purple.shade600;
       default: return Colors.blueGrey.shade400; // 'Others' or uncategorized
+    }
+  }
+
+  IconData _getIconForCategory(String category) {
+    switch (category.toLowerCase()) {
+      case 'food':
+        return Icons.restaurant;
+      case 'education':
+        return Icons.school;
+      case 'transpo':
+        return Icons.directions_car;
+      case 'wants':
+        return Icons.shopping_bag;
+      default:
+        return Icons.category;
     }
   }
 
@@ -161,7 +212,7 @@ class _SummaryPageState extends State<SummaryPage> {
           color: Colors.white,
         ),
         // Only show percentage title if the slice is large enough to read
-        showTitle: (data['percent'] as int) > 5, 
+        showTitle: (data['percent'] as int) > 1, 
       );
     }).toList();
   }
@@ -184,8 +235,8 @@ class _SummaryPageState extends State<SummaryPage> {
     final DateTime end = summary['endOfWeek'] as DateTime;
     
     // Format dates for display
-    String dateFormatter(DateTime date) => 
-      '${date.month}/${date.day}';
+    /*String dateFormatter(DateTime date) => 
+      '${date.month}/${date.day}';*/
     
     // Prepare data for the Pie Chart (only positive categories)
     final pieChartSections = _getPieChartSections(chartData);
@@ -197,42 +248,47 @@ class _SummaryPageState extends State<SummaryPage> {
         automaticallyImplyLeading: false, 
         backgroundColor: Colors.white,
         elevation: 0,
-        toolbarHeight: 0, // Hide the default AppBar area
+        toolbarHeight: 0, 
       ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // --- Title Section ---
-              const Text(
-                'Summary of Expenses',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.black),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'WEEKLY SUMMARY',
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.black),
+                ),
               ),
               const SizedBox(height: 16),
 
-              // --- Week Range Display (NEW) ---
               Text(
-                'Week: ${dateFormatter(start)} - ${dateFormatter(end)}',
-                style: TextStyle(fontSize: 14, color: Colors.deepPurple.shade600, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
+                'TOTAL EXPENSE THIS WEEK',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors. black54,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+                textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
 
-              // --- Total Expense Section ---
-              const Text(
-                'Total Expense for the week',
-                style: TextStyle(fontSize: 16, color: Colors.black54),
-              ),
               // Shows the total weekly expenses
               Text(
                 '₱${weeklyExpenses.toStringAsFixed(2)}',
                 style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blueGrey.shade700),
+                    color: Colors.blueGrey.shade700
+                ),
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 6),
 
               // --- Pie Chart Implementation ---
               Center(
@@ -242,16 +298,65 @@ class _SummaryPageState extends State<SummaryPage> {
                   child: PieChart(
                     PieChartData(
                       sections: pieChartSections,
-                      centerSpaceRadius: 0, // No center space for the image design
+                      centerSpaceRadius: 0, 
                       borderData: FlBorderData(show: false),
-                      sectionsSpace: 2, // Slight gap between sections
+                      sectionsSpace: 2,
                     ),
                   ),
                 ),
               ),
               
               // --- Category List (Legend) ---
-              const SizedBox(height: 40),
+              Container(
+                padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+                decoration: BoxDecoration(
+                  color:Color.fromARGB(255, 221, 226, 228), 
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFcfd8dc)),
+                ),
+                child: DropdownButton<DateTime>(
+                  value: _availableWeeks.contains(_selectedWeek) 
+                          ? _selectedWeek 
+                          : (_availableWeeks.isNotEmpty 
+                              ? _availableWeeks.first : 
+                              _selectedWeek),
+                  underline: const SizedBox(), // Remove default underline
+                  icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF5e6c85)), 
+                  items: _availableWeeks.map((weekStart) {
+                    return DropdownMenuItem<DateTime>(
+                      value: weekStart,
+                      child: Text(
+                        _formatWeekRange(weekStart),
+                        style: TextStyle(fontSize: 14, color:  Colors.blueGrey.shade700, fontWeight: FontWeight.w600,),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (DateTime ? newWeek) {
+                    if (newWeek != null) {
+                      setState(() {
+                        _selectedWeek = newWeek;
+                      });
+                    }
+                  },
+                )
+              ), 
+
+              const SizedBox(height: 30),
+
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Expense Breakdown:',
+                  style: TextStyle(
+                    fontSize: 18, 
+                    fontWeight: FontWeight.w700, 
+                    color: Colors.blueGrey.shade800
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
               Card(
                 elevation: 0,
                 color: Colors.blueGrey.shade100, // Background color for the card
@@ -265,6 +370,7 @@ class _SummaryPageState extends State<SummaryPage> {
                       color: data['color'] as Color,
                       category: data['name'] as String,
                       amount: data['amount'] as double,
+                      icon: _getIconForCategory(data['name'] as String),
                     )).toList(),
                   ),
                 ),
@@ -287,17 +393,18 @@ class _SummaryPageState extends State<SummaryPage> {
   }
 }
 
-// Helper Widget for the Category List Items
 class CategoryListItem extends StatelessWidget {
   final Color color;
   final String category;
   final double amount;
+  final IconData icon;
 
   const CategoryListItem({
     super.key,
     required this.color,
     required this.category,
     required this.amount,
+    required this.icon,
   });
 
   @override
@@ -310,18 +417,15 @@ class CategoryListItem extends StatelessWidget {
           Row(
             children: [
               // Colored dot
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: color,
-                ),
+              Icon(
+              icon,
+              color: color,
+              size: 20,
               ),
               const SizedBox(width: 12),
               // Category Name
               Text(
-                category,
+                category[0].toUpperCase() + category.substring(1),
                 style: TextStyle(
                   fontSize: 16, 
                   color: Colors.blueGrey.shade800,
