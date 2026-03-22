@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-import '../database/db_helper.dart';
-import 'edit_page.dart';
 import 'expense_model.dart';
+import 'dart:async';
+import '../database/db_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'monthly_view.dart';
+import 'edit_page.dart';
 
 class HomePage extends StatefulWidget {
+  // Note: The expenses list is managed statically now (HomePage.expenses)
+  // and edit/delete operations call setState in the _HomePageState via this key/method.
   const HomePage({super.key});
 
   static double userBudget = 0.0;
@@ -18,25 +20,57 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
+// Set up a stateful widget with mixing for animation control (for TabController)
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
   final Color kBlueLight = const Color(0xFFDCE8F5);
   final Color kSelectedBlue = const Color(0xFF5E6C85);
 
   late List<DateTime> weekDates;
   late String currentMonthName;
   late TabController _tabController;
-  late DateTime _currentWeekStart;
+  late DateTime _currentWeekStart;  
+
+  Future<void> loadExpenses() async {
+    final data = await DBHelper().getAllExpenses();
+    setState(() {
+      HomePage.expenses.clear();
+      HomePage.expenses.addAll(data);
+    });
+  }
+
+  // REQUIRED: Method to get the currently selected date, called by main.dart
+  DateTime getSelectedDate() {
+    return weekDates[_tabController.index];
+  }
+
+  /*Calculates the dates for the current week, starting on Monday.
+  List<DateTime> _getCurrentWeekDates() {
+    final now = DateTime.now();
+    // now.weekday is 1 (Mon) to 7 (Sun). Subtracting (now.weekday - 1) gets us to Monday.
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    return List.generate(7, (i) => startOfWeek.add(Duration(days: i)));
+  }*/
+
+  List<DateTime> _getWeekDates(DateTime startOfWeek) {
+    return List.generate(7, (i) => startOfWeek.add(Duration(days: i)));
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
 
   @override
   void initState() {
-    super.initState();
     loadExpenses();
-
+    super.initState();
+    //weekDates = _getCurrentWeekDates();
     final now = DateTime.now();
     _currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
     weekDates = _getWeekDates(_currentWeekStart);
     _loadBudget();
 
+    //final now = DateTime.now();
     const months = [
       'January',
       'February',
@@ -53,7 +87,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     ];
     currentMonthName = months[now.month - 1];
 
-    final int todayIndex = now.weekday - 1;
+    // Find today's index (0-6) and initialize TabController
+    int todayIndex = now.weekday - 1;
     _tabController = TabController(
       length: weekDates.length,
       vsync: this,
@@ -67,21 +102,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     });
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  Future<void> loadExpenses() async {
-    final data = await DBHelper().getAllExpenses();
-    setState(() {
-      HomePage.expenses
-        ..clear()
-        ..addAll(data);
-    });
-  }
-
   Future<void> _loadBudget() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getDouble('budgetAmount');
@@ -92,19 +112,23 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
   }
 
-  DateTime getSelectedDate() {
-    return weekDates[_tabController.index];
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
-  List<DateTime> _getWeekDates(DateTime startOfWeek) {
-    return List.generate(7, (i) => startOfWeek.add(Duration(days: i)));
+  void _deleteExpense(int index) async {
+    final id = HomePage.expenses[index].id!;
+    await DBHelper().deleteExpense(id);
+    setState(() {
+      HomePage.expenses.removeAt(index);
+    });
   }
 
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
-
+  // Delete with 5-second undo toast/snackbar
   void _deleteExpenseWithUndo(Expense item, int index) {
+    // Remove from UI immediately
     setState(() {
       HomePage.expenses.removeAt(index);
     });
@@ -113,8 +137,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     bool undone = false;
 
     messenger.hideCurrentSnackBar();
-    messenger
-        .showSnackBar(
+    messenger.showSnackBar(
           SnackBar(
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.transparent,
@@ -178,8 +201,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ),
         )
         .closed
-        .then((_) async {
+        .then((reason) async {
           if (!undone) {
+            // Commit delete to DB only if not undone
             final id = item.id;
             if (id != null) {
               await DBHelper().deleteExpense(id);
@@ -199,7 +223,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     final old = HomePage.expenses[index];
 
     final updatedExpense = Expense(
-      id: old.id,
+      id: old.id, // PRESERVE DATABASE ID
       name: name,
       amount: amount,
       category: category,
@@ -207,16 +231,19 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       details: details,
     );
 
+    // Update the database if the ID exists
     if (updatedExpense.id != null) {
       await DBHelper().updateExpense(updatedExpense);
     }
 
+    // Update the in-memory list and trigger UI refresh
     setState(() {
       HomePage.expenses[index] = updatedExpense;
     });
   }
 
-  void _openEditExpenseDialog(int index) async {
+  // Edit popup
+ void _openEditExpenseDialog(int index) async {
     final expense = HomePage.expenses[index];
 
     final updated = await Navigator.push<Expense>(
@@ -238,16 +265,30 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
   }
 
+  String _getWeeklyTotal() {
+    double total = 0;
+    for (var expense in HomePage.expenses) {
+      bool isInWeek = weekDates.any((d) => _isSameDay(d, expense.date));
+      if (isInWeek) {
+        total += expense.amount;
+      }
+    }
+    return "₱${total.toStringAsFixed(2)}";
+  }
+
   String _getDayTotal(DateTime date) {
-    final dayExpenses = HomePage.expenses.where((e) => _isSameDay(e.date, date)).toList();
-    final double total = dayExpenses.fold(0.0, (sum, e) => sum + e.amount);
-    return '₱${total.toStringAsFixed(2)}';
+    final dayExpenses = HomePage.expenses
+        .where((e) => _isSameDay(e.date, date))
+        .toList();
+    double total = dayExpenses.fold(0.0, (sum, e) => sum + e.amount);
+    return "₱${total.toStringAsFixed(2)}";
   }
 
   double _calculateWeeklySpent() {
     double total = 0.0;
-    for (final expense in HomePage.expenses) {
-      final bool isInWeek = weekDates.any((d) => _isSameDay(d, expense.date));
+    for (var expense in HomePage.expenses) {
+      // Check if expense date is inside the current week list
+      bool isInWeek = weekDates.any((d) => _isSameDay(d, expense.date));
       if (isInWeek) {
         total += expense.amount;
       }
@@ -256,16 +297,16 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   String _getBalanceLeft() {
-    final double spent = _calculateWeeklySpent();
-    final double balance = HomePage.userBudget - spent;
-    return '₱${balance.toStringAsFixed(2)}';
+    double spent = _calculateWeeklySpent();
+    double balance = HomePage.userBudget - spent;
+    return "₱${balance.toStringAsFixed(2)}";
   }
 
   String _getSavings() {
-    final double spent = _calculateWeeklySpent();
+    double spent = _calculateWeeklySpent();
     double savings = HomePage.userBudget - spent;
     if (savings < 0) savings = 0;
-    return '₱${savings.toStringAsFixed(2)}';
+    return "₱${savings.toStringAsFixed(2)}";
   }
 
   @override
@@ -283,24 +324,27 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ),
         ),
         centerTitle: true,
-        actions: [
+
+        actions: [ 
           Container(
             margin: const EdgeInsets.only(right: 12),
             padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
             child: IconButton(
-              icon: const Icon(Icons.calendar_month, color: Colors.black),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MonthlyViewPage()),
-                );
-              },
-            ),
+                  icon: const Icon(Icons.calendar_month, color: Colors.black),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MonthlyViewPage()),
+                    );
+                  },
+                ),
           ),
-        ],
+          
+        ]
       ),
       body: Column(
         children: [
+          // --- Custom Day Selector (Row of Buttons) ---
           Container(
             margin: const EdgeInsets.symmetric(vertical: 10),
             height: 90,
@@ -311,74 +355,79 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   icon: const Icon(Icons.arrow_back_ios, size: 18),
                   onPressed: () {
                     setState(() {
-                      _currentWeekStart = _currentWeekStart.subtract(const Duration(days: 7));
+                      _currentWeekStart =
+                          _currentWeekStart.subtract(const Duration(days: 7));
                       weekDates = _getWeekDates(_currentWeekStart);
-                      _tabController.animateTo(0);
+                      _tabController.animateTo(0); // Reset to first day of the new week
                     });
                   },
                 ),
+                
                 Expanded(
                   child: Row(
                     children: weekDates.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final date = entry.value;
-                      final dayName = [
-                        'Mon',
-                        'Tue',
-                        'Wed',
-                        'Thu',
-                        'Fri',
-                        'Sat',
-                        'Sun',
-                      ][date.weekday - 1];
+                  final index = entry.key;
+                  final date = entry.value;
+                  final dayName = [
+                    'Mon',
+                    'Tue',
+                    'Wed',
+                    'Thu',
+                    'Fri',
+                    'Sat',
+                    'Sun',
+                  ][date.weekday - 1];
 
-                      final bool isSelected = _tabController.index == index;
+                  bool isSelected = _tabController.index == index;
 
-                      return Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            _tabController.animateTo(index);
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? kSelectedBlue
-                                  : const Color(0xFFE0E0E0).withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  dayName,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: isSelected ? Colors.white70 : Colors.grey,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  date.day.toString(),
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: isSelected ? Colors.white : Colors.grey[700],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        _tabController.animateTo(index);
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? kSelectedBlue
+                              : const Color(0xFFE0E0E0).withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(25),
                         ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                IconButton(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              dayName,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isSelected ? Colors.white70 : Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              date.day.toString(),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected
+                                    ? Colors.white
+                                    : Colors.grey[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            IconButton(
                   icon: const Icon(Icons.arrow_forward_ios, size: 18),
                   onPressed: () {
                     setState(() {
-                      _currentWeekStart = _currentWeekStart.add(const Duration(days: 7));
+                      _currentWeekStart =
+                          _currentWeekStart.add(const Duration(days: 7));
                       weekDates = _getWeekDates(_currentWeekStart);
                       _tabController.animateTo(0);
                     });
@@ -387,212 +436,227 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               ],
             ),
           ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: weekDates.map((date) {
-                return _buildDayPage(date);
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDayPage(DateTime date) {
-    final dayExpenses = HomePage.expenses.where((e) => _isSameDay(e.date, date)).toList();
-
-    final dayName = [
-      'Mon',
-      'Tue',
-      'Wed',
-      'Thu',
-      'Fri',
-      'Sat',
-      'Sun',
-    ][date.weekday - 1];
-    final dateString = '$dayName, ${date.day}';
-
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildSummaryCard(
-                'Weekly Expenses',
-                '₱${_calculateWeeklySpent().toStringAsFixed(2)}',
-              ),
-              const SizedBox(width: 8),
-              _buildSummaryCard('Balance Left', _getBalanceLeft()),
-              const SizedBox(width: 8),
-              _buildSummaryCard('Savings', _getSavings()),
-            ],
-          ),
-        ),
-        Container(
-          margin: const EdgeInsets.only(bottom: 15),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: Text(
-            'Daily Expense ($dateString): ${_getDayTotal(date)}',
-            style: TextStyle(
-              color: Colors.grey[700],
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Expanded(
-          child: dayExpenses.isEmpty
-              ? Center(
-                  child: Text(
-                    'No expenses for ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][date.weekday - 1]}.',
-                    style: TextStyle(color: Colors.grey[400], fontSize: 16),
-                  ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.only(bottom: 80),
-                  itemCount: dayExpenses.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final item = dayExpenses[index];
-                    final realIndex = HomePage.expenses.indexOf(item);
-
-                    return Dismissible(
-                      key: UniqueKey(),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        color: Colors.redAccent,
-                        alignment: Alignment.centerRight,
-                        child: const Padding(
-                          padding: EdgeInsets.only(right: 20.0),
-                          child: Icon(Icons.delete, color: Colors.white),
-                        ),
-                      ),
-                      onDismissed: (_) => _deleteExpenseWithUndo(item, realIndex),
-                      child: _buildTransactionItem(item, realIndex),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSummaryCard(String title, String amount) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: kBlueLight,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              amount,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: Colors.grey[700],
+            // --- Main Content Area (TabBarView) ---
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: weekDates.map((date) {
+                  return _buildDayPage(date);
+                }).toList(),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTransactionItem(Expense item, int realIndex) {
-    IconData icon;
-    Color iconColor;
-    switch (item.category) {
-      case 'transpo':
-        icon = Icons.directions_car_filled;
-        iconColor = Colors.blue.shade700;
-        break;
-      case 'food':
-        icon = Icons.fastfood;
-        iconColor = Colors.red.shade700;
-        break;
-      case 'education':
-        icon = Icons.school;
-        iconColor = Colors.green.shade700;
-        break;
-      case 'wants':
-        icon = Icons.shopping_bag;
-        iconColor = Colors.purple.shade700;
-        break;
-      default:
-        icon = Icons.attach_money;
-        iconColor = Colors.black;
+      );
     }
 
-    return Container(
-      color: const Color(0xFFECF3FA),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      child: Row(
+    // Widget responsible for showing summary cards and the list of expenses for a specific day
+    Widget _buildDayPage(DateTime date) {
+      final dayExpenses = HomePage.expenses
+          .where((e) => _isSameDay(e.date, date))
+          .toList();
+
+      final dayName = [
+        'Mon',
+        'Tue',
+        'Wed',
+        'Thu',
+        'Fri',
+        'Sat',
+        'Sun',
+      ][date.weekday - 1];
+      final dateString = "$dayName, ${date.day}";
+
+      return Column(
         children: [
-          IconButton(
-            icon: Icon(Icons.edit_square, color: Colors.grey[400], size: 24),
-            onPressed: () => _openEditExpenseDialog(realIndex),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: iconColor),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // SUMMARY CARDS
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ), // Added vertical padding
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  item.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                _buildSummaryCard(
+                  "Weekly Expenses",
+                  "₱${_calculateWeeklySpent().toStringAsFixed(2)}",
                 ),
-                Text(
-                  item.category.toUpperCase(),
-                  style: TextStyle(color: Colors.blueGrey[300], fontSize: 10),
-                ),
+                const SizedBox(width: 8),
+                _buildSummaryCard("Balance Left", _getBalanceLeft()),
+                const SizedBox(width: 8),
+                _buildSummaryCard("Savings", _getSavings()),
               ],
             ),
           ),
-          const Spacer(),
-          Text(
-            '-₱${item.amount.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: Colors.redAccent,
+
+          Container(
+            margin: const EdgeInsets.only(bottom: 15),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.grey[200], // Light grey background
+              borderRadius: BorderRadius.circular(20), // Pill shape
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Text(
+              "Daily Expense ($dateString): ${_getDayTotal(date)}",
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
             ),
           ),
+
+          const SizedBox(height: 10), // Reduced spacing slightly
+
+          Expanded(
+            child: dayExpenses.isEmpty
+                ? Center(
+                    child: Text(
+                      "No expenses for ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][date.weekday - 1]}.",
+                      style: TextStyle(color: Colors.grey[400], fontSize: 16),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.only(bottom: 80),
+                    itemCount: dayExpenses.length,
+                    separatorBuilder: (context, index) =>
+                        const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final item = dayExpenses[index];
+                      final realIndex = HomePage.expenses.indexOf(item);
+
+                      return Dismissible(
+                        key: UniqueKey(),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          color: Colors.redAccent,
+                          alignment: Alignment.centerRight,
+                          child: const Padding(
+                            padding: EdgeInsets.only(right: 20.0),
+                            child: Icon(Icons.delete, color: Colors.white),
+                          ),
+                        ),
+                        onDismissed: (direction) =>
+                            _deleteExpenseWithUndo(item, realIndex),
+                        child: _buildTransactionItem(item, realIndex),
+                      );
+                    },
+                  ),
+          ),
         ],
-      ),
-    );
+      );
+    }
+
+    // Helper widget for the summary cards2
+    Widget _buildSummaryCard(String title, String amount) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: kBlueLight,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                amount,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Colors.grey[700],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Helper widget for a single transaction row
+    Widget _buildTransactionItem(Expense item, int realIndex) {
+      IconData icon;
+      Color iconColor;
+      switch (item.category) {
+        case 'transpo':
+          icon = Icons.directions_car_filled;
+          iconColor = Colors.blue.shade700;
+          break;
+        case 'food':
+          icon = Icons.fastfood;
+          iconColor = Colors.red.shade700;
+          break;
+        case 'education':
+          icon = Icons.school;
+          iconColor = Colors.green.shade700;
+          break;
+        case 'wants':
+          icon = Icons.shopping_bag;
+          iconColor = Colors.purple.shade700;
+          break;
+        default:
+          icon = Icons.attach_money;
+          iconColor = Colors.black;
+      }
+
+      return Container(
+        color: const Color(0xFFECF3FA),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        child: Row(
+          children: [
+            IconButton(
+              icon: Icon(Icons.edit_square, color: Colors.grey[400], size: 24),
+              onPressed: () => _openEditExpenseDialog(realIndex),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: iconColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    item.category.toUpperCase(),
+                    style: TextStyle(color: Colors.blueGrey[300], fontSize: 10),
+                  ),
+                ],
+              ),
+            ),
+            const Spacer(),
+            Text(
+              "-₱${item.amount.toStringAsFixed(2)}",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.redAccent,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
   }
-}
