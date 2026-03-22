@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -92,6 +92,7 @@ class _CustomizationPageState extends State<CustomizationPage> {
   }
 
   //Notification schedule
+  // ignore: unused_element
   Future<void> _scheduleReminder() async {
     await flutterLocalNotificationsPlugin.cancelAll();
     // 2. Define the notification details for Android
@@ -318,7 +319,7 @@ class _CustomizationPageState extends State<CustomizationPage> {
     }
   }
 
-  String _formatCurrency(double value) => '₱${value.toStringAsFixed(2)}';
+  String _formatCurrency(double value) => 'PHP ${value.toStringAsFixed(2)}';
 
   // Persist and react to notifications toggle
   Future<void> _updateNotificationsEnabled(bool enabled) async {
@@ -560,6 +561,7 @@ class _CustomizationPageState extends State<CustomizationPage> {
   }
 
   // Inspect currently scheduled notifications for debugging/test
+  // ignore: unused_element
   Future<void> _checkPendingNotifications() async {
     if (Platform.isAndroid ||
         Platform.isIOS ||

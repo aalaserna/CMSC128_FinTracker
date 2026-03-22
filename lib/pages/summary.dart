@@ -1,14 +1,14 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart'; 
-//import 'homepage.dart';
-import 'expense_model.dart';
+
 import '../database/db_helper.dart';
+import 'expense_model.dart';
 
 class SummaryPage extends StatefulWidget {
   const SummaryPage({super.key});
 
   @override
-  _SummaryPageState createState() => _SummaryPageState();
+  State<SummaryPage> createState() => _SummaryPageState();
 }
 
 class _SummaryPageState extends State<SummaryPage> {
@@ -17,11 +17,9 @@ class _SummaryPageState extends State<SummaryPage> {
   late DateTime _selectedWeek;
   List<DateTime> _availableWeeks = [];
 
-
   @override
   void initState() {
     super.initState();
-    
     final now = DateTime.now();
     final currentDate = DateTime(now.year, now.month, now.day);
     _selectedWeek =
@@ -33,10 +31,9 @@ class _SummaryPageState extends State<SummaryPage> {
     final db = DBHelper();
     final data = await db.getAllExpenses();
 
-    _generateAvailableWeeks();
-
     setState(() {
       _expenses = data;
+      _generateAvailableWeeks();
       _isLoading = false;
     });
   }
@@ -45,7 +42,6 @@ class _SummaryPageState extends State<SummaryPage> {
     final now = DateTime.now();
     final currentDate = DateTime(now.year, now.month, now.day);
 
-  // Start of current week
     final currentStartOfWeek =
         currentDate.subtract(Duration(days: currentDate.weekday - 1));
 
@@ -62,7 +58,6 @@ class _SummaryPageState extends State<SummaryPage> {
       }
 
       weeks.add(weekStart);
-
       weekStart = weekStart.subtract(const Duration(days: 7));
     }
 
@@ -78,7 +73,6 @@ class _SummaryPageState extends State<SummaryPage> {
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
-
   Map<String, dynamic> calculateWeeklySummary() {
     final startOfWeek = DateTime(
       _selectedWeek.year,
@@ -93,16 +87,14 @@ class _SummaryPageState extends State<SummaryPage> {
     if (_expenses.isEmpty) {
       return {
         'total': 0.0,
-        'categories': [],
-        'chartCategories': [],
+        'categories': <Map<String, dynamic>>[],
+        'chartCategories': <Map<String, dynamic>>[],
         'startOfWeek': startOfWeek,
         'endOfWeek': endOfWeek,
       };
-    }    
+    }
 
-    // ===== Filter Expenses For Current Week =====
     final List<Expense> weeklyExpensesList = _expenses.where((e) {
-      // Compare only the date (normalize the expense date)
       final expenseDate = DateTime(e.date.year, e.date.month, e.date.day);
       return (expenseDate.isAfter(startOfWeek) ||
               expenseDate.isAtSameMomentAs(startOfWeek)) &&
@@ -113,13 +105,12 @@ class _SummaryPageState extends State<SummaryPage> {
     final double total =
         weeklyExpensesList.fold(0.0, (sum, e) => sum + e.amount);
 
-    // ===== Group and Calculate Totals for each category
-    Map<String, double> categoryTotals = {};
-    for (var expense in weeklyExpensesList) {
+    final Map<String, double> categoryTotals = {};
+    for (final expense in weeklyExpensesList) {
       categoryTotals.update(
-        expense.category, 
-        (value) => value + expense.amount, 
-        ifAbsent: () => expense.amount
+        expense.category,
+        (value) => value + expense.amount,
+        ifAbsent: () => expense.amount,
       );
     }
 
@@ -133,7 +124,7 @@ class _SummaryPageState extends State<SummaryPage> {
     }).toList();
 
     final List<Map<String, dynamic>> chartData = categoryTotals.entries
-        .where((e) => e.value > 0)
+        .where((entry) => entry.value > 0)
         .map((entry) {
       return {
         'name': entry.key,
@@ -193,7 +184,6 @@ class _SummaryPageState extends State<SummaryPage> {
     List<Map<String, dynamic>> categoryData,
   ) {
     if (categoryData.isEmpty) {
-      // Return a single default section for a gray/empty look if there's no data
       return [
         PieChartSectionData(
           color: Colors.grey.shade300,
@@ -203,7 +193,7 @@ class _SummaryPageState extends State<SummaryPage> {
         ),
       ];
     }
-    
+
     return categoryData.map((data) {
       return PieChartSectionData(
         color: data['color'] as Color,
@@ -319,7 +309,6 @@ class _SummaryPageState extends State<SummaryPage> {
 
     final pieChartSections = _getPieChartSections(chartData);
     final isDataEmpty = chartData.isEmpty;
-    
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F4EE),

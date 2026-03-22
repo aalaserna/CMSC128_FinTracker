@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'expense_model.dart';
-import 'dart:async';
-import '../database/db_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../database/db_helper.dart';
+import 'edit_page.dart';
+import 'expense_model.dart';
+import 'monthly_view.dart';
+
 class HomePage extends StatefulWidget {
-  // Note: The expenses list is managed statically now (HomePage.expenses)
-  // and edit/delete operations call setState in the _HomePageState via this key/method.
   const HomePage({super.key});
 
   static double userBudget = 0.0;
@@ -18,57 +18,25 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-// Set up a stateful widget with mixing for animation control (for TabController)
-class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
+class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
   final Color kBlueLight = const Color(0xFFDCE8F5);
   final Color kSelectedBlue = const Color(0xFF5E6C85);
 
   late List<DateTime> weekDates;
   late String currentMonthName;
   late TabController _tabController;
-  late DateTime _currentWeekStart; 
-
-  Future<void> loadExpenses() async {
-    final data = await DBHelper().getAllExpenses();
-    setState(() {
-      HomePage.expenses.clear();
-      HomePage.expenses.addAll(data);
-    });
-  }
-
-  // REQUIRED: Method to get the currently selected date, called by main.dart
-  DateTime getSelectedDate() {
-    return weekDates[_tabController.index];
-  }
-
-  /*Calculates the dates for the current week, starting on Monday.
-  List<DateTime> _getCurrentWeekDates() {
-    final now = DateTime.now();
-    // now.weekday is 1 (Mon) to 7 (Sun). Subtracting (now.weekday - 1) gets us to Monday.
-    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-    return List.generate(7, (i) => startOfWeek.add(Duration(days: i)));
-  }*/ 
-
-  List<DateTime> _getWeekDates(DateTime startOfWeek) {
-  return List.generate(7, (i) => startOfWeek.add(Duration(days: i)));
-} 
-
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
+  late DateTime _currentWeekStart;
 
   @override
   void initState() {
-    loadExpenses();
     super.initState();
-    //weekDates = _getCurrentWeekDates();
+    loadExpenses();
+
     final now = DateTime.now();
     _currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
     weekDates = _getWeekDates(_currentWeekStart);
     _loadBudget();
 
-    //final now = DateTime.now();
     const months = [
       'January',
       'February',
@@ -85,8 +53,7 @@ class _HomePageState extends State<HomePage>
     ];
     currentMonthName = months[now.month - 1];
 
-    // Find today's index (0-6) and initialize TabController
-    int todayIndex = now.weekday - 1;
+    final int todayIndex = now.weekday - 1;
     _tabController = TabController(
       length: weekDates.length,
       vsync: this,
@@ -100,6 +67,21 @@ class _HomePageState extends State<HomePage>
     });
   }
 
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> loadExpenses() async {
+    final data = await DBHelper().getAllExpenses();
+    setState(() {
+      HomePage.expenses
+        ..clear()
+        ..addAll(data);
+    });
+  }
+
   Future<void> _loadBudget() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getDouble('budgetAmount');
@@ -110,23 +92,19 @@ class _HomePageState extends State<HomePage>
     }
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  DateTime getSelectedDate() {
+    return weekDates[_tabController.index];
   }
 
-  void _deleteExpense(int index) async {
-    final id = HomePage.expenses[index].id!;
-    await DBHelper().deleteExpense(id);
-    setState(() {
-      HomePage.expenses.removeAt(index);
-    });
+  List<DateTime> _getWeekDates(DateTime startOfWeek) {
+    return List.generate(7, (i) => startOfWeek.add(Duration(days: i)));
   }
 
-  // Delete with 5-second undo toast/snackbar
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
   void _deleteExpenseWithUndo(Expense item, int index) {
-    // Remove from UI immediately
     setState(() {
       HomePage.expenses.removeAt(index);
     });
@@ -138,24 +116,70 @@ class _HomePageState extends State<HomePage>
     messenger
         .showSnackBar(
           SnackBar(
-            content: Text('Deleted "${item.name}"'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: 'Undo',
-              onPressed: () {
-                undone = true;
-                // Restore item at original position
-                setState(() {
-                  HomePage.expenses.insert(index, item);
-                });
-              },
+            content: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(185, 28, 35, 64),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.18),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.delete_outline_rounded, color: Colors.white70, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Deleted "${item.name}"',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      undone = true;
+                      messenger.hideCurrentSnackBar();
+                      setState(() {
+                        HomePage.expenses.insert(index, item);
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Undo',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         )
         .closed
-        .then((reason) async {
+        .then((_) async {
           if (!undone) {
-            // Commit delete to DB only if not undone
             final id = item.id;
             if (id != null) {
               await DBHelper().deleteExpense(id);
@@ -175,7 +199,7 @@ class _HomePageState extends State<HomePage>
     final old = HomePage.expenses[index];
 
     final updatedExpense = Expense(
-      id: old.id, // PRESERVE DATABASE ID
+      id: old.id,
       name: name,
       amount: amount,
       category: category,
@@ -183,182 +207,47 @@ class _HomePageState extends State<HomePage>
       details: details,
     );
 
-    // Update the database if the ID exists
     if (updatedExpense.id != null) {
       await DBHelper().updateExpense(updatedExpense);
     }
 
-    // Update the in-memory list and trigger UI refresh
     setState(() {
       HomePage.expenses[index] = updatedExpense;
     });
   }
 
-  // Edit popup
-  void _openEditExpenseDialog(int index) {
-    Expense e = HomePage.expenses[index];
-    String name = e.name;
-    String amountText = e.amount.toStringAsFixed(2);
-    String category = e.category;
-    String details = e.details;
-    DateTime selectedDate = e.date;
+  void _openEditExpenseDialog(int index) async {
+    final expense = HomePage.expenses[index];
 
-    final nameController = TextEditingController(text: name);
-    final amountController = TextEditingController(text: amountText);
-    final detailsController = TextEditingController(text: details);
+    final updated = await Navigator.push<Expense>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditExpensePage(expense: expense),
+      ),
+    );
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: const Text('Edit Expense'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Expense Name',
-                      ),
-                      controller: nameController,
-                      onChanged: (value) => name = value,
-                    ),
-                    TextField(
-                      decoration: const InputDecoration(labelText: 'Amount'),
-                      controller: amountController,
-                      keyboardType: TextInputType.number,
-                      onChanged: (value) => amountText = value,
-                    ),
-                    DropdownButtonFormField<String>(
-                      initialValue:
-                          [
-                            'transpo',
-                            'food',
-                            'education',
-                            'wants',
-                          ].contains(category)
-                          ? category
-                          : 'transpo',
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'transpo',
-                          child: Text('Transpo'),
-                        ),
-                        DropdownMenuItem(value: 'food', child: Text('Food')),
-                        DropdownMenuItem(
-                          value: 'education',
-                          child: Text('Education'),
-                        ),
-                        DropdownMenuItem(value: 'wants', child: Text('Wants')),
-                      ],
-                      onChanged: (String? value) {
-                        if (value != null) {
-                          setStateDialog(() => category = value);
-                        }
-                      },
-                    ),
-                    TextField(
-                      decoration: const InputDecoration(labelText: 'Details'),
-                      controller: detailsController,
-                      onChanged: (value) => details = value,
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Text(
-                          'Date: ${selectedDate.toLocal().toString().split(' ')[0]}',
-                        ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () async {
-                            final pickedDate = await showDatePicker(
-                              context: context,
-                              initialDate: selectedDate,
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime(2100),
-                            );
-                            if (pickedDate != null) {
-                              setStateDialog(() => selectedDate = pickedDate);
-                            }
-                          },
-                          child: const Text('Select Date'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    final double? amount = double.tryParse(
-                      amountController.text,
-                    );
-                    if (nameController.text.isNotEmpty &&
-                        amount != null &&
-                        amount > 0) {
-                      _editExpense(
-                        index,
-                        nameController.text,
-                        amount,
-                        category,
-                        selectedDate,
-                        detailsController.text,
-                      );
-                      Navigator.pop(context);
-                    } else {
-                      // simple feedback if invalid
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please enter a positive amount.'),
-                        ),
-                      );
-                    }
-                  },
-                  child: const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    ).then((_) {
-      nameController.dispose();
-      amountController.dispose();
-      detailsController.dispose();
-    });
-  }
-
-  String _getWeeklyTotal() {
-    double total = 0;
-    for (var expense in HomePage.expenses) {
-      bool isInWeek = weekDates.any((d) => _isSameDay(d, expense.date));
-      if (isInWeek) {
-        total += expense.amount;
-      }
+    if (updated != null) {
+      _editExpense(
+        index,
+        updated.name,
+        updated.amount,
+        updated.category,
+        updated.date,
+        updated.details,
+      );
     }
-    return "₱${total.toStringAsFixed(2)}";
   }
 
   String _getDayTotal(DateTime date) {
-    final dayExpenses = HomePage.expenses
-        .where((e) => _isSameDay(e.date, date))
-        .toList();
-    double total = dayExpenses.fold(0.0, (sum, e) => sum + e.amount);
-    return "₱${total.toStringAsFixed(2)}";
+    final dayExpenses = HomePage.expenses.where((e) => _isSameDay(e.date, date)).toList();
+    final double total = dayExpenses.fold(0.0, (sum, e) => sum + e.amount);
+    return '₱${total.toStringAsFixed(2)}';
   }
 
   double _calculateWeeklySpent() {
     double total = 0.0;
-    for (var expense in HomePage.expenses) {
-      // Check if expense date is inside the current week list
-      bool isInWeek = weekDates.any((d) => _isSameDay(d, expense.date));
+    for (final expense in HomePage.expenses) {
+      final bool isInWeek = weekDates.any((d) => _isSameDay(d, expense.date));
       if (isInWeek) {
         total += expense.amount;
       }
@@ -367,16 +256,16 @@ class _HomePageState extends State<HomePage>
   }
 
   String _getBalanceLeft() {
-    double spent = _calculateWeeklySpent();
-    double balance = HomePage.userBudget - spent;
-    return "₱${balance.toStringAsFixed(2)}";
+    final double spent = _calculateWeeklySpent();
+    final double balance = HomePage.userBudget - spent;
+    return '₱${balance.toStringAsFixed(2)}';
   }
 
   String _getSavings() {
-    double spent = _calculateWeeklySpent();
+    final double spent = _calculateWeeklySpent();
     double savings = HomePage.userBudget - spent;
     if (savings < 0) savings = 0;
-    return "₱${savings.toStringAsFixed(2)}";
+    return '₱${savings.toStringAsFixed(2)}';
   }
 
   @override
@@ -394,10 +283,24 @@ class _HomePageState extends State<HomePage>
           ),
         ),
         centerTitle: true,
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
+            child: IconButton(
+              icon: const Icon(Icons.calendar_month, color: Colors.black),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MonthlyViewPage()),
+                );
+              },
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
-          // --- Custom Day Selector (Row of Buttons) ---
           Container(
             margin: const EdgeInsets.symmetric(vertical: 10),
             height: 90,
@@ -408,14 +311,12 @@ class _HomePageState extends State<HomePage>
                   icon: const Icon(Icons.arrow_back_ios, size: 18),
                   onPressed: () {
                     setState(() {
-                      _currentWeekStart =
-                          _currentWeekStart.subtract(const Duration(days: 7));
+                      _currentWeekStart = _currentWeekStart.subtract(const Duration(days: 7));
                       weekDates = _getWeekDates(_currentWeekStart);
-                      _tabController.animateTo(0); // Reset to first day of the new week
+                      _tabController.animateTo(0);
                     });
                   },
                 ),
-
                 Expanded(
                   child: Row(
                     children: weekDates.asMap().entries.map((entry) {
@@ -430,8 +331,8 @@ class _HomePageState extends State<HomePage>
                         'Sat',
                         'Sun',
                       ][date.weekday - 1];
-                      
-                      bool isSelected = _tabController.index == index;
+
+                      final bool isSelected = _tabController.index == index;
 
                       return Expanded(
                         child: GestureDetector(
@@ -462,9 +363,7 @@ class _HomePageState extends State<HomePage>
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : Colors.grey[700],
+                                    color: isSelected ? Colors.white : Colors.grey[700],
                                   ),
                                 ),
                               ],
@@ -479,8 +378,7 @@ class _HomePageState extends State<HomePage>
                   icon: const Icon(Icons.arrow_forward_ios, size: 18),
                   onPressed: () {
                     setState(() {
-                      _currentWeekStart =
-                          _currentWeekStart.add(const Duration(days: 7));
+                      _currentWeekStart = _currentWeekStart.add(const Duration(days: 7));
                       weekDates = _getWeekDates(_currentWeekStart);
                       _tabController.animateTo(0);
                     });
@@ -489,7 +387,6 @@ class _HomePageState extends State<HomePage>
               ],
             ),
           ),
-          // --- Main Content Area (TabBarView) ---
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -503,11 +400,8 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  // Widget responsible for showing summary cards and the list of expenses for a specific day
   Widget _buildDayPage(DateTime date) {
-    final dayExpenses = HomePage.expenses
-        .where((e) => _isSameDay(e.date, date))
-        .toList();
+    final dayExpenses = HomePage.expenses.where((e) => _isSameDay(e.date, date)).toList();
 
     final dayName = [
       'Mon',
@@ -518,41 +412,36 @@ class _HomePageState extends State<HomePage>
       'Sat',
       'Sun',
     ][date.weekday - 1];
-    final dateString = "$dayName, ${date.day}";
+    final dateString = '$dayName, ${date.day}';
 
     return Column(
       children: [
-        // SUMMARY CARDS
         Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16.0,
-            vertical: 8.0,
-          ), // Added vertical padding
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildSummaryCard(
-                "Weekly Expenses",
-                "₱${_calculateWeeklySpent().toStringAsFixed(2)}",
+                'Weekly Expenses',
+                '₱${_calculateWeeklySpent().toStringAsFixed(2)}',
               ),
               const SizedBox(width: 8),
-              _buildSummaryCard("Balance Left", _getBalanceLeft()),
+              _buildSummaryCard('Balance Left', _getBalanceLeft()),
               const SizedBox(width: 8),
-              _buildSummaryCard("Savings", _getSavings()),
+              _buildSummaryCard('Savings', _getSavings()),
             ],
           ),
         ),
-
         Container(
           margin: const EdgeInsets.only(bottom: 15),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.grey[200], // Light grey background
-            borderRadius: BorderRadius.circular(20), // Pill shape
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.grey.shade300),
           ),
           child: Text(
-            "Daily Expense ($dateString): ${_getDayTotal(date)}",
+            'Daily Expense ($dateString): ${_getDayTotal(date)}',
             style: TextStyle(
               color: Colors.grey[700],
               fontWeight: FontWeight.w600,
@@ -560,22 +449,19 @@ class _HomePageState extends State<HomePage>
             ),
           ),
         ),
-
-        const SizedBox(height: 10), // Reduced spacing slightly
-
+        const SizedBox(height: 10),
         Expanded(
           child: dayExpenses.isEmpty
               ? Center(
                   child: Text(
-                    "No expenses for ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][date.weekday - 1]}.",
+                    'No expenses for ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][date.weekday - 1]}.',
                     style: TextStyle(color: Colors.grey[400], fontSize: 16),
                   ),
                 )
               : ListView.separated(
                   padding: const EdgeInsets.only(bottom: 80),
                   itemCount: dayExpenses.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 1),
+                  separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final item = dayExpenses[index];
                     final realIndex = HomePage.expenses.indexOf(item);
@@ -591,8 +477,7 @@ class _HomePageState extends State<HomePage>
                           child: Icon(Icons.delete, color: Colors.white),
                         ),
                       ),
-                      onDismissed: (direction) =>
-                          _deleteExpenseWithUndo(item, realIndex),
+                      onDismissed: (_) => _deleteExpenseWithUndo(item, realIndex),
                       child: _buildTransactionItem(item, realIndex),
                     );
                   },
@@ -602,7 +487,6 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  // Helper widget for the summary cards2
   Widget _buildSummaryCard(String title, String amount) {
     return Expanded(
       child: Container(
@@ -636,7 +520,6 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  // Helper widget for a single transaction row
   Widget _buildTransactionItem(Expense item, int realIndex) {
     IconData icon;
     Color iconColor;
@@ -666,7 +549,7 @@ class _HomePageState extends State<HomePage>
         iconColor = const Color.fromARGB(255, 145, 104, 189);
       default:
         icon = Icons.attach_money;
-        iconColor = Colors.black;
+        iconColor = const Color.fromARGB(255, 75, 93, 129);
     }
 
     return Container(
@@ -708,8 +591,8 @@ class _HomePageState extends State<HomePage>
           ),
           const Spacer(),
           Text(
-            "-₱${item.amount.toStringAsFixed(2)}",
-            style: TextStyle(
+            '-₱${item.amount.toStringAsFixed(2)}',
+            style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
               color: Colors.redAccent,

@@ -139,10 +139,10 @@ class _EditExpensePageState extends State<EditExpensePage> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             // Description
-                            _buildLabel('Description'),
+                            _buildLabel('Name of Expense'),
                             _buildTextInput(
                               controller: _nameController,
-                              hint: 'Enter description here',
+                              hint: 'Enter name here',
                               onChanged: (v) => name = v,
                               validator: (v) =>
                                   v == null || v.isEmpty ? 'Enter a name' : null,
