@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'pages/homepage.dart';
 import 'pages/summary.dart';
 import 'pages/customizations.dart';
-import 'pages/add_expense.dart'; 
+import 'pages/expenses/add/add_expense_page.dart'; 
 import 'pages/profile.dart';
 import 'pages/expense_model.dart';
 import 'pages/landing.dart';
