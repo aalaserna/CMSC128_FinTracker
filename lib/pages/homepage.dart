@@ -643,20 +643,27 @@ class _HomePageState extends State<HomePage>
     switch (item.category) {
       case 'transpo':
         icon = Icons.directions_car_filled;
-        iconColor = Colors.blue.shade700;
+        iconColor = const Color(0xFF4D78E6);
         break;
       case 'food':
         icon = Icons.fastfood;
-        iconColor = Colors.red.shade700;
+        iconColor = const Color.fromARGB(255, 190, 173, 124);
         break;
-      case 'education':
+      case 'school':
         icon = Icons.school;
-        iconColor = Colors.green.shade700;
+        iconColor = const Color(0xFFFF7A45);
         break;
-      case 'wants':
-        icon = Icons.shopping_bag;
-        iconColor = Colors.purple.shade700;
+      case 'groceries':
+        icon = Icons.local_grocery_store;
+        iconColor = const Color(0xFF8AD99A);
         break;
+      case 'bill':
+        icon = Icons.receipt;
+        iconColor = const Color.fromARGB(255, 117, 197, 213);
+        break;
+        case 'custom':
+        icon = Icons.account_balance_wallet;
+        iconColor = const Color.fromARGB(255, 145, 104, 189);
       default:
         icon = Icons.attach_money;
         iconColor = Colors.black;

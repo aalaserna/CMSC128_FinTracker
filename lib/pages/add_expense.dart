@@ -19,6 +19,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
   String amount = '';
   String category = 'transpo';
   String details = '';
+  String customCategory = '';
   late DateTime selectedDate;
 
   @override
@@ -68,15 +69,36 @@ class _AddExpensePageState extends State<AddExpensePage> {
                 initialValue: category,
                 decoration: const InputDecoration(labelText: 'Category'),
                 items: const [
-                  DropdownMenuItem(value: 'transpo', child: Text('Transpo')),
-                  DropdownMenuItem(value: 'food', child: Text('Food')),
-                  DropdownMenuItem(value: 'education', child: Text('Education')),
-                  DropdownMenuItem(value: 'wants', child: Text('Wants')),
+                  DropdownMenuItem(value: 'transpo', child: Text('Transportation')),
+                  DropdownMenuItem(value: 'food', child: Text('Daily Food')),
+                  DropdownMenuItem(value: 'school', child: Text('School')),
+                  DropdownMenuItem(value: 'groceries', child: Text('Groceries')),
+                  DropdownMenuItem(value: 'bill', child: Text('Bills')),
+                  DropdownMenuItem(value: 'custom', child: Text('Custom')),
                 ],
                 onChanged: (val) {
-                  if (val != null) setState(() => category = val);
+                  if (val != null){
+                    setState((){
+                      category = val;
+                      if (category != 'custom') {
+                        customCategory = '';
+                      }
+                    });
+                  }
                 },
               ),
+              if (category == 'custom')
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'Custom Category'),
+                  onChanged: (val) => customCategory = val,
+                  validator: (val) {
+                    if (category == 'custom' &&
+                        (val == null || val.trim().isEmpty)) {
+                      return 'Enter a custom category';
+                    }
+                    return null;
+                  },
+                ),
               TextFormField(
                 decoration: const InputDecoration(labelText: 'Details'),
                 onChanged: (val) => details = val,
@@ -106,10 +128,12 @@ class _AddExpensePageState extends State<AddExpensePage> {
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
+                    final finalCategory =
+                      category == 'custom' ? customCategory.trim().toLowerCase() : category;
                    final newExpense = Expense(
                       name: name,
                       amount: double.parse(amount),
-                      category: category,
+                      category: finalCategory,
                       date: selectedDate,
                       details: details,
                     );

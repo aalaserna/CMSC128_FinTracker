@@ -24,8 +24,8 @@ class _SummaryPageState extends State<SummaryPage> {
     
     final now = DateTime.now();
     final currentDate = DateTime(now.year, now.month, now.day);
-    _selectedWeek = currentDate.subtract(Duration(days: currentDate.weekday - 1));
-
+    _selectedWeek =
+        currentDate.subtract(Duration(days: currentDate.weekday - 1));
     loadExpensesFromDB();
   }
 
@@ -54,10 +54,8 @@ class _SummaryPageState extends State<SummaryPage> {
 
     while (true) {
       final weekEnd = weekStart.add(const Duration(days: 6));
-
       final isInCurrentMonth =
-          weekStart.month == now.month ||
-          weekEnd.month == now.month;
+          weekStart.month == now.month || weekEnd.month == now.month;
 
       if (!isInCurrentMonth) {
         break;
@@ -71,9 +69,13 @@ class _SummaryPageState extends State<SummaryPage> {
     _availableWeeks = weeks.reversed.toList();
   }
 
-  String _formatWeekRange(DateTime startOfWeek) {
-    final endOfWeek = startOfWeek.add(const Duration(days: 6));
-    return '${startOfWeek.month}/${startOfWeek.day} - ${endOfWeek.month}/${endOfWeek.day}';
+  String _formatFullDate(DateTime date) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
 
@@ -84,10 +86,10 @@ class _SummaryPageState extends State<SummaryPage> {
       _selectedWeek.day,
     );
 
-    final endOfWeek = startOfWeek.add(
-      const Duration(days: 6, hours: 23, minutes: 59, seconds: 59),
-    );
+    final endOfWeek = startOfWeek
+        .add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
 
+  
     if (_expenses.isEmpty) {
       return {
         'total': 0.0,
@@ -102,14 +104,14 @@ class _SummaryPageState extends State<SummaryPage> {
     final List<Expense> weeklyExpensesList = _expenses.where((e) {
       // Compare only the date (normalize the expense date)
       final expenseDate = DateTime(e.date.year, e.date.month, e.date.day);
-      
-      // Must be greater than or equal to startOfWeek AND less than or equal to endOfWeek
-      return (expenseDate.isAfter(startOfWeek) || expenseDate.isAtSameMomentAs(startOfWeek)) &&
-             (expenseDate.isBefore(endOfWeek) || expenseDate.isAtSameMomentAs(endOfWeek));
+      return (expenseDate.isAfter(startOfWeek) ||
+              expenseDate.isAtSameMomentAs(startOfWeek)) &&
+          (expenseDate.isBefore(endOfWeek) ||
+              expenseDate.isAtSameMomentAs(endOfWeek));
     }).toList();
 
-    // ===== Calculate the Total Weekly Expense =====
-    final double total = weeklyExpensesList.fold(0.0, (sum, e) => sum + e.amount);
+    final double total =
+        weeklyExpensesList.fold(0.0, (sum, e) => sum + e.amount);
 
     // ===== Group and Calculate Totals for each category
     Map<String, double> categoryTotals = {};
@@ -121,8 +123,8 @@ class _SummaryPageState extends State<SummaryPage> {
       );
     }
 
-    // ===== Build data for legend (all categories)
-    final List<Map<String, dynamic>> categoryData = categoryTotals.entries.map((entry) {
+    final List<Map<String, dynamic>> categoryData =
+        categoryTotals.entries.map((entry) {
       return {
         'name': entry.key,
         'amount': entry.value,
@@ -130,20 +132,13 @@ class _SummaryPageState extends State<SummaryPage> {
       };
     }).toList();
 
-    // ===== Build data for chart (positive amounts only)
-    final double positiveSum = categoryTotals.values
-        .where((v) => v > 0)
-        .fold(0.0, (sum, v) => sum + v);
-
     final List<Map<String, dynamic>> chartData = categoryTotals.entries
         .where((e) => e.value > 0)
         .map((entry) {
-      final percent = positiveSum > 0 ? ((entry.value / positiveSum) * 100).round() : 0;
       return {
         'name': entry.key,
         'amount': entry.value,
         'color': _getColorForCategory(entry.key),
-        'percent': percent,
       };
     }).toList();
 
@@ -158,11 +153,20 @@ class _SummaryPageState extends State<SummaryPage> {
 
   Color _getColorForCategory(String category) {
     switch (category.toLowerCase()) {
-      case 'food': return const Color.fromARGB(255, 253, 53, 53);
-      case 'education': return const Color.fromARGB(255, 25, 113, 0);
-      case 'transpo': return const Color.fromARGB(255, 53, 73, 229);
-      case 'wants': return Colors.purple.shade600;
-      default: return Colors.blueGrey.shade400; // 'Others' or uncategorized
+      case 'food':
+        return const Color.fromARGB(255, 190, 173, 124);
+      case 'school':
+        return const Color(0xFFFF7A45);
+      case 'transpo':
+        return const Color(0xFF4D78E6);
+      case 'groceries':
+        return const Color(0xFF8AD99A);
+      case 'bill':
+        return const Color.fromARGB(255, 117, 197, 213);
+      case 'custom':
+        return const Color.fromARGB(255, 187, 107, 227);
+      default:
+        return const Color(0xFFBFC7D5);
     }
   }
 
@@ -170,51 +174,128 @@ class _SummaryPageState extends State<SummaryPage> {
     switch (category.toLowerCase()) {
       case 'food':
         return Icons.restaurant;
-      case 'education':
+      case 'school':
         return Icons.school;
       case 'transpo':
         return Icons.directions_car;
-      case 'wants':
+      case 'groceries':
+        return Icons.local_grocery_store;
+      case 'bill':
+        return Icons.receipt;
+      case 'custom':
         return Icons.shopping_bag;
       default:
         return Icons.category;
     }
   }
 
-// Helper function to convert calculated data into fl_chart format
-  List<PieChartSectionData> _getPieChartSections(List<Map<String, dynamic>> categoryData) {
+  List<PieChartSectionData> _getPieChartSections(
+    List<Map<String, dynamic>> categoryData,
+  ) {
     if (categoryData.isEmpty) {
       // Return a single default section for a gray/empty look if there's no data
       return [
         PieChartSectionData(
           color: Colors.grey.shade300,
           value: 100,
-          title: '0%',
-          radius: 100,
-          titleStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+          title: '',
+          radius: 58,
         ),
       ];
     }
     
     return categoryData.map((data) {
-      final color = data['color'] as Color;
-      final value = data['amount'] as double;
-      final title = '${data['percent']}%';
-      
       return PieChartSectionData(
-        color: color,
-        value: value,
-        title: title,
-        radius: 100, // Size of the chart slices
-        titleStyle: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
-        // Only show percentage title if the slice is large enough to read
-        showTitle: (data['percent'] as int) > 1, 
+        color: data['color'] as Color,
+        value: data['amount'] as double,
+        title: '',
+        radius: 58,
       );
     }).toList();
+  }
+
+  int _transactionCountForCategory(String category) {
+    final startOfWeek = DateTime(
+      _selectedWeek.year,
+      _selectedWeek.month,
+      _selectedWeek.day,
+    );
+
+    final endOfWeek = startOfWeek
+        .add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
+
+    return _expenses.where((e) {
+      final expenseDate = DateTime(e.date.year, e.date.month, e.date.day);
+      return e.category.toLowerCase() == category.toLowerCase() &&
+          (expenseDate.isAfter(startOfWeek) ||
+              expenseDate.isAtSameMomentAs(startOfWeek)) &&
+          (expenseDate.isBefore(endOfWeek) ||
+              expenseDate.isAtSameMomentAs(endOfWeek));
+    }).length;
+  }
+
+  Widget _expenseTile({
+    required Color color,
+    required String title,
+    required double amount,
+    required IconData icon,
+    required int transactions,
+  }) {
+    final displayTitle =
+        title.isNotEmpty ? title[0].toUpperCase() + title.substring(1) : title;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  displayTitle,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF202124),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '$transactions transaction${transactions == 1 ? '' : 's'}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '₱${amount.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF202124),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -228,222 +309,160 @@ class _SummaryPageState extends State<SummaryPage> {
     final summary = calculateWeeklySummary();
     final double weeklyExpenses = summary['total'] as double;
     final List<Map<String, dynamic>> categoryData =
-      List<Map<String, dynamic>>.from((summary['categories'] ?? const []) as List);
+        List<Map<String, dynamic>>.from(
+      (summary['categories'] ?? const []) as List,
+    );
     final List<Map<String, dynamic>> chartData =
-      List<Map<String, dynamic>>.from((summary['chartCategories'] ?? const []) as List);
-    final DateTime start = summary['startOfWeek'] as DateTime; 
-    final DateTime end = summary['endOfWeek'] as DateTime;
-    
-    // Format dates for display
-    /*String dateFormatter(DateTime date) => 
-      '${date.month}/${date.day}';*/
-    
-    // Prepare data for the Pie Chart (only positive categories)
+        List<Map<String, dynamic>>.from(
+      (summary['chartCategories'] ?? const []) as List,
+    );
+
     final pieChartSections = _getPieChartSections(chartData);
     final isDataEmpty = chartData.isEmpty;
     
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF2F4EE),
       appBar: AppBar(
-        automaticallyImplyLeading: false, 
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF2F4EE),
         elevation: 0,
-        toolbarHeight: 0, 
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // --- Title Section ---
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'WEEKLY SUMMARY',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.black),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              Text(
-                'TOTAL EXPENSE THIS WEEK',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors. black54,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
-                textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-
-              // Shows the total weekly expenses
-              Text(
-                '₱${weeklyExpenses.toStringAsFixed(2)}',
-                style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueGrey.shade700
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 6),
-
-              // --- Pie Chart Implementation ---
-              Center(
-                child: SizedBox(
-                  height: 250,
-                  width: 250,
-                  child: PieChart(
-                    PieChartData(
-                      sections: pieChartSections,
-                      centerSpaceRadius: 0, 
-                      borderData: FlBorderData(show: false),
-                      sectionsSpace: 2,
-                    ),
-                  ),
-                ),
-              ),
-              
-              // --- Category List (Legend) ---
-              Container(
-                padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
-                decoration: BoxDecoration(
-                  color:Color.fromARGB(255, 221, 226, 228), 
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFcfd8dc)),
-                ),
-                child: DropdownButton<DateTime>(
-                  value: _availableWeeks.contains(_selectedWeek) 
-                          ? _selectedWeek 
-                          : (_availableWeeks.isNotEmpty 
-                              ? _availableWeeks.first : 
-                              _selectedWeek),
-                  underline: const SizedBox(), // Remove default underline
-                  icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF5e6c85)), 
-                  items: _availableWeeks.map((weekStart) {
-                    return DropdownMenuItem<DateTime>(
-                      value: weekStart,
-                      child: Text(
-                        _formatWeekRange(weekStart),
-                        style: TextStyle(fontSize: 14, color:  Colors.blueGrey.shade700, fontWeight: FontWeight.w600,),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (DateTime ? newWeek) {
-                    if (newWeek != null) {
-                      setState(() {
-                        _selectedWeek = newWeek;
-                      });
-                    }
-                  },
-                )
-              ), 
-
-              const SizedBox(height: 30),
-
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Expense Breakdown:',
-                  style: TextStyle(
-                    fontSize: 18, 
-                    fontWeight: FontWeight.w700, 
-                    color: Colors.blueGrey.shade800
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              Card(
-                elevation: 0,
-                color: Colors.blueGrey.shade100, // Background color for the card
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Column(
-                    children: categoryData.map((data) => CategoryListItem(
-                      color: data['color'] as Color,
-                      category: data['name'] as String,
-                      amount: data['amount'] as double,
-                      icon: _getIconForCategory(data['name'] as String),
-                    )).toList(),
-                  ),
-                ),
-              ),
-              if (isDataEmpty) // Display a message if no data is present
-                const Padding(
-                  padding: EdgeInsets.only(top: 16.0),
-                  child: Center(
-                    child: Text(
-                      'No expenses recorded for this week.',
-                      style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
-                    ),
-                  ),
-                ),
-            ],
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        title: const Text(
+          'Weekly Expense',
+          style: TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.w700,
+            fontSize: 22,
           ),
         ),
-      ),
-    );
-  }
-}
-
-class CategoryListItem extends StatelessWidget {
-  final Color color;
-  final String category;
-  final double amount;
-  final IconData icon;
-
-  const CategoryListItem({
-    super.key,
-    required this.color,
-    required this.category,
-    required this.amount,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              // Colored dot
-              Icon(
-              icon,
-              color: color,
-              size: 20,
-              ),
-              const SizedBox(width: 12),
-              // Category Name
-              Text(
-                category[0].toUpperCase() + category.substring(1),
-                style: TextStyle(
-                  fontSize: 16, 
-                  color: Colors.blueGrey.shade800,
-                  fontWeight: FontWeight.w500
-                ),
-              ),
-            ],
-          ),
-          // Amount (Placeholder text style matching image)
-          Text(
-            '₱${amount.toStringAsFixed(2)}',
-            style: TextStyle(
-              fontSize: 16, 
-              color: Colors.blueGrey.shade800,
-              fontWeight: FontWeight.w500
-            ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 16),
+            child: Icon(Icons.settings_outlined, color: Colors.black87),
           ),
         ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    '₱${weeklyExpenses.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 38,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E2723),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Spent this week',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  Center(
+                    child: SizedBox(
+                      height: 210,
+                      width: 210,
+                      child: PieChart(
+                        PieChartData(
+                          sections: pieChartSections,
+                          centerSpaceRadius: 52,
+                          sectionsSpace: 0,
+                          borderData: FlBorderData(show: false),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF2F4F5),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE3E5E8)),
+                    ),
+                    child: DropdownButton<DateTime>(
+                      isExpanded: true,
+                      value: _availableWeeks.contains(_selectedWeek)
+                          ? _selectedWeek
+                          : (_availableWeeks.isNotEmpty ? _availableWeeks.first : _selectedWeek),
+                      underline: const SizedBox(),
+                      icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black87),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                      items: _availableWeeks.map((weekStart) {
+                        final endOfWeek = weekStart.add(const Duration(days: 6));
+                        return DropdownMenuItem<DateTime>(
+                          value: weekStart,
+                          child: Text(
+                            '${_formatFullDate(weekStart)} - ${_formatFullDate(endOfWeek)}',
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (DateTime? newWeek) {
+                        if (newWeek != null) {
+                          setState(() {
+                            _selectedWeek = newWeek;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            ...categoryData.map(
+              (data) => _expenseTile(
+                color: data['color'] as Color,
+                title: data['name'] as String,
+                amount: data['amount'] as double,
+                icon: _getIconForCategory(data['name'] as String),
+                transactions:
+                    _transactionCountForCategory(data['name'] as String),
+              ),
+            ),
+            if (isDataEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Center(
+                  child: Text(
+                    'No expenses recorded for this week.',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
