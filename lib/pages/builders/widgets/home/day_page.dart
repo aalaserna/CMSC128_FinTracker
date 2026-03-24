@@ -47,7 +47,7 @@ class DayPage extends StatelessWidget {
             children: [
               Expanded(
                 child: SummaryCard(
-                  title: 'Weekly Expenses',
+                  title: 'Spent This Week',
                   amount: '₱${calculateWeeklySpent(allExpenses, weekDates).toStringAsFixed(2)}',
                 )),
               const SizedBox(width: 8),
@@ -56,7 +56,7 @@ class DayPage extends StatelessWidget {
                 child: GestureDetector(
                   onTap: onSummaryTap,
                   child: SummaryCard(
-                    title: 'Balance Left',
+                    title: 'Left to Spend',
                     amount: getBalanceLeft(allExpenses, weekDates, userBudget),
                   ),
                 )
@@ -81,7 +81,7 @@ class DayPage extends StatelessWidget {
             border: Border.all(color: Colors.grey.shade300),
           ),
           child: Text(
-            'Daily Expense ($dateString): ${getDayTotal(allExpenses, date)}',
+            'Today\'s Total ($dateString): ${getDayTotal(allExpenses, date)}',
             style: TextStyle(
               color: Colors.grey[700],
               fontWeight: FontWeight.w600,
@@ -97,7 +97,8 @@ class DayPage extends StatelessWidget {
           child: dayExpenses.isEmpty
               ? Center(
                   child: Text(
-                    'You have no expenses for $dayName.',
+                    textAlign: TextAlign.center,
+                    'You have no expenses for $dayName.\nTap the + button to log an expense.',
                     style: TextStyle(color: Colors.grey[400], fontSize: 16),
                   ),
                 )

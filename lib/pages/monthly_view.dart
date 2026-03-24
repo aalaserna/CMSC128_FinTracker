@@ -296,13 +296,13 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildSummaryCard(
-                  "Your Total for This Month",
+                  "This Month's Total",
                   "₱${_getMonthlyTotal().toStringAsFixed(2)}",
                   const Color(0xFFDCE8F5),
                 ),
                 const SizedBox(width: 12),
                 _buildSummaryCard(
-                  "Your Total for Today",
+                  "Today's Total",
                   "₱${_getSelectedDayTotal().toStringAsFixed(2)}",
                   const Color(0xFFEAEAF4),
                 ),
@@ -314,7 +314,8 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
             child: selectedDayExpenses.isEmpty
               ? Center(
                   child: Text(
-                    'You have no expenses for ${_selectedDay?.month}/${_selectedDay?.day}.',
+                    'You have no expenses for ${_selectedDay?.month}/${_selectedDay?.day}.\nTap the + button to log an expense.',
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.grey, 
                       fontSize: 16
