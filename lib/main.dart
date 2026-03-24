@@ -118,7 +118,13 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     // List of all the screens. HomePage must be instantiated with its static key
     // so its state (like the selected date) can be accessed from the FAB.
     final pages = <Widget>[
-      HomePage(key: HomePage.homePageStateKey),
+      HomePage(key: HomePage.homePageStateKey,
+        onSummaryTap: () {
+          setState(() {
+            _bottomNavIndex = 1; 
+          });
+        },
+      ),
       const SummaryPage(),
       const CustomizationPage(),
       const ProfilePage(), 
