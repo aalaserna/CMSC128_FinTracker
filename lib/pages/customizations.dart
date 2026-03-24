@@ -1,11 +1,24 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
 import '../main.dart';
 import '../utils/notification_helper.dart';
-import 'dart:io';
+
+bool get _supportsNotifications =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.linux);
+
+const _navy = Color(0xFF1C2340);
+const _cardBg = Color(0xFFBFC8D6);
+const _fieldBg = Colors.white;
+const _bodyText = Color(0xFF2E3A59);
+const _hintText = Color(0xFF8A9BB5);
+const _divider = Color(0xFFD0D7E2);
 
 class CustomizationPage extends StatefulWidget {
   const CustomizationPage({super.key});
@@ -15,37 +28,24 @@ class CustomizationPage extends StatefulWidget {
 }
 
 class _CustomizationPageState extends State<CustomizationPage> {
-  //Notification Plugin Instance
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  // State variables for customization options
-  String _budgetAmount = ''; // Budget text input
   String _selectedBudgetFrequency = 'Weekly';
   String _selectedReminderFrequency = 'Daily';
-  TimeOfDay _selectedTime = const TimeOfDay(
-    hour: 20,
-    minute: 0,
-  ); // Default to 8:00 PM
+  TimeOfDay _selectedTime = const TimeOfDay(hour: 20, minute: 0);
   bool _notificationsEnabled = true;
-  double? _savedBudget; // For showing current budget as placeholder
+  double? _savedBudget;
 
-  // Lists for dropdown options
   final List<String> _budgetFrequencies = ['Weekly', 'Monthly'];
   final List<String> _reminderFrequencies = ['Daily', 'Weekly', 'Monthly'];
-
-  // Text controller for the budget input field
   final TextEditingController _budgetController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    tz.initializeTimeZones();
-    // Initialize notifications only on supported platforms (Android, iOS, macOS, Linux)
-    if (Platform.isAndroid ||
-        Platform.isIOS ||
-        Platform.isMacOS ||
-        Platform.isLinux) {
+    tz_data.initializeTimeZones();
+    if (_supportsNotifications) {
       _initializeNotifications();
     }
     _loadExistingSettings();
@@ -57,278 +57,101 @@ class _CustomizationPageState extends State<CustomizationPage> {
     super.dispose();
   }
 
-  //Notifications
-  void _initializeNotifications() async {
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    const InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
-
-    // Initialize the plugin
-    await flutterLocalNotificationsPlugin.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) async {
-        print('Notification tapped with payload: ${response.payload}');
-      },
-    );
-
-    // On Android 13+, request notification permission if not granted
-    if (Platform.isAndroid) {
-      final androidImpl = flutterLocalNotificationsPlugin
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >();
-      try {
-        final enabled = await androidImpl?.areNotificationsEnabled();
-        if (enabled == false) {
-          await androidImpl?.requestNotificationsPermission();
-        }
-      } catch (e) {
-        // Best-effort; do not block
-        print('Notification permission check failed: $e');
-      }
-    }
+  Future<void> _initializeNotifications() async {
+    // Use notification helper from utils
+    await NotificationHelper.showTestNotification(message: "Syncing notification settings...");
   }
 
-  //Notification schedule
-  // ignore: unused_element
-  Future<void> _scheduleReminder() async {
-    await flutterLocalNotificationsPlugin.cancelAll();
-    // 2. Define the notification details for Android
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-          'expense_reminder_channel_id', // Unique channel ID
-          'Expense Tracking Reminders', // Channel name
-          channelDescription:
-              'Reminders to log expenses based on user frequency.',
-          importance: Importance.high,
-          priority: Priority.high,
-        );
-    const NotificationDetails notificationDetails = NotificationDetails(
-      android: androidDetails,
-    );
-
-    // 3. Set the Time Zone
-    // We use tz.local which represents the device's current time zone.
-    final now = tz.TZDateTime.now(tz.local);
-
-    // 4. Calculate the next exact time for the reminder
-    var nextSchedule = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      _selectedTime.hour,
-      _selectedTime.minute,
-    );
-
-    // If the selected time is already past today, schedule it for the next appropriate period (e.g., tomorrow)
-    if (nextSchedule.isBefore(now)) {
-      nextSchedule = nextSchedule.add(const Duration(days: 1));
-    }
-
-    // 5. Define notification content
-    const String title = 'Time to Track Your Expenses!';
-    const String body =
-        'Don\'t forget to log your recent expenses to stay within your budget.';
-
-    // 6. Schedule the notification based on frequency
-    DateTimeComponents matchComponents;
-    int notificationId = 0;
-
-    if (_selectedReminderFrequency == 'Daily') {
-      matchComponents =
-          DateTimeComponents.time; // Repeat at the same time every day
-      notificationId = 100;
-    } else if (_selectedReminderFrequency == 'Weekly') {
-      matchComponents = DateTimeComponents
-          .dayOfWeekAndTime; // Repeat on the same day/time every week
-      notificationId = 200;
-    } else if (_selectedReminderFrequency == 'Monthly') {
-      matchComponents = DateTimeComponents
-          .dayOfMonthAndTime; // Repeat on the same day/time every month
-      notificationId = 300;
-    } else {
-      // Default to one-time notification if frequency is somehow invalid
-      await flutterLocalNotificationsPlugin.zonedSchedule(
-        0,
-        title,
-        body,
-        nextSchedule,
-        notificationDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-      );
-      print('One-time reminder scheduled.');
-      return;
-    }
-
-    // Schedule the repeating notification, prefer exact; fall back if not permitted
-    try {
-      await flutterLocalNotificationsPlugin.zonedSchedule(
-        notificationId,
-        title,
-        body,
-        nextSchedule,
-        notificationDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: matchComponents,
-      );
-      print(
-        '$_selectedReminderFrequency reminder scheduled (exact) for ${_selectedTime.format(context)}',
-      );
-    } catch (e) {
-      // Android 14+ may restrict exact alarms
-      try {
-        await flutterLocalNotificationsPlugin.zonedSchedule(
-          notificationId,
-          title,
-          body,
-          nextSchedule,
-          notificationDetails,
-          androidScheduleMode: AndroidScheduleMode.inexact,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-          matchDateTimeComponents: matchComponents,
-        );
-        print('Exact alarm not permitted, scheduled inexact: $e');
-      } catch (e2) {
-        print('Failed to schedule even inexact reminder: $e2');
-      }
-    }
-  }
-
-  // Function to show the time picker dialog (same as before)
   Future<void> _selectTime(BuildContext context) async {
-    final TimeOfDay? picked = await showTimePicker(
+    final picked = await showTimePicker(
       context: context,
       initialTime: _selectedTime,
     );
     if (picked != null && picked != _selectedTime) {
-      setState(() {
-        _selectedTime = picked;
-      });
+      setState(() => _selectedTime = picked);
     }
   }
 
-  // Function called when the Done button is pressed
-  void _saveCustomizations() async {
-    _budgetAmount = _budgetController.text.trim();
+  Future<void> _saveCustomizations() async {
+    final prefs = await SharedPreferences.getInstance();
 
-    // Accept existing saved budget if input is empty; otherwise sanitize and parse
-    double? parseBudget(String text) {
-      final cleaned = text.replaceAll(RegExp(r'[^0-9\.]'), '');
-      if (cleaned.isEmpty) return null;
-      return double.tryParse(cleaned);
+    final parsedBudget = double.tryParse(_budgetController.text.trim());
+    final budgetToStore = parsedBudget ?? _savedBudget ?? 0.0;
+
+    await prefs.setDouble('budgetAmount', budgetToStore);
+    await prefs.setString('budgetCycle', _selectedBudgetFrequency);
+    await prefs.setBool('notificationsEnabled', _notificationsEnabled);
+    await prefs.setString('reminderFrequency', _selectedReminderFrequency);
+    await prefs.setInt('reminderHour', _selectedTime.hour);
+    await prefs.setInt('reminderMinute', _selectedTime.minute);
+    await prefs.setBool('pendingSchedule', true);
+    await prefs.setBool('hasCompletedOnboarding', true);
+    await prefs.setBool('isFirstTime', false);
+
+    // This tells the helper there is a new schedule to set
+    await prefs.setBool('pendingSchedule', true);
+
+    if (_notificationsEnabled) {
+      // 1. Check for battery/exact alarm permissions
+      await NotificationHelper.checkBatteryOptimizations();
+      // 2. Schedule the notification
+      await NotificationHelper.scheduleFromPrefs();
+      
+      // 3. OPTIONAL: Show a test notification immediately to confirm it works
+      await NotificationHelper.showTestNotification(
+        message: "Reminders set for ${_selectedTime.format(context)}"
+      );
     }
 
-    double? budgetToSave;
-    if (_budgetAmount.isEmpty) {
-      budgetToSave = _savedBudget; // keep previously saved budget
-    } else {
-      budgetToSave = parseBudget(_budgetAmount);
-    }
+    // CRITICAL FIX: Check if the screen is still visible before popping
+    if (!mounted) return;
 
-    if (budgetToSave == null || budgetToSave < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid budget amount.')),
+    if (Navigator.of(context).canPop()) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const ExpenseHomePage()),
+        (route) => false,
       );
       return;
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('budgetAmount', budgetToSave);
-    await prefs.setString(
-      'budgetCycle',
-      _selectedBudgetFrequency,
-    ); // 'Weekly' | 'Monthly'
-    await prefs.setBool('notificationsEnabled', _notificationsEnabled);
-    // Persist reminder settings for scheduling later
-    await prefs.setString('reminderFrequency', _selectedReminderFrequency);
-    await prefs.setInt('reminderHour', _selectedTime.hour);
-    await prefs.setInt('reminderMinute', _selectedTime.minute);
-    // Mark that scheduling should occur after navigation
-    await prefs.setBool('pendingSchedule', _notificationsEnabled);
-    // Start a new cycle now
-    await prefs.setInt(
-      'cycleStartEpochMs',
-      DateTime.now().millisecondsSinceEpoch,
-    );
-    prefs.setBool("isFirstTime", false); // mark setup completed
-
-    setState(() {
-      _savedBudget = budgetToSave;
-    });
-
-    // Fire a one-off test notification if reminders are enabled
-    if (_notificationsEnabled) {
-      await NotificationHelper.showTestNotification(
-        message:
-            'Reminders set for ${_selectedTime.format(context)} ($_selectedReminderFrequency).',
-      );
-    }
-
-    // Navigate immediately to Home, do not block on scheduling
-    if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const ExpenseHomePage()),
-      (route) => false,
-    );
-
-    // Scheduling will be handled on Home after navigation based on pending flag
+    _showTopSnackBar('Customizations saved.');
   }
 
   Future<void> _loadExistingSettings() async {
     final prefs = await SharedPreferences.getInstance();
+
     final b = prefs.getDouble('budgetAmount');
-    if (b != null) {
-      setState(() {
-        _savedBudget = b;
-      });
-    }
+    if (b != null) setState(() => _savedBudget = b);
+
     final cycle = prefs.getString('budgetCycle');
     if (cycle != null && _budgetFrequencies.contains(cycle)) {
-      setState(() {
-        _selectedBudgetFrequency = cycle;
-      });
-    }
-    final notif = prefs.getBool('notificationsEnabled');
-    if (notif != null) {
-      setState(() {
-        _notificationsEnabled = notif;
-      });
+      setState(() => _selectedBudgetFrequency = cycle);
     }
 
-    // Load saved reminder frequency and time if available
+    final notif = prefs.getBool('notificationsEnabled');
+    if (notif != null) setState(() => _notificationsEnabled = notif);
+
     final savedFreq = prefs.getString('reminderFrequency');
     if (savedFreq != null && _reminderFrequencies.contains(savedFreq)) {
-      setState(() {
-        _selectedReminderFrequency = savedFreq;
-      });
+      setState(() => _selectedReminderFrequency = savedFreq);
     }
+
     final hour = prefs.getInt('reminderHour');
     final minute = prefs.getInt('reminderMinute');
     if (hour != null && minute != null) {
-      setState(() {
-        _selectedTime = TimeOfDay(hour: hour, minute: minute);
-      });
+      setState(() => _selectedTime = TimeOfDay(hour: hour, minute: minute));
     }
   }
 
   String _formatCurrency(double value) => 'PHP ${value.toStringAsFixed(2)}';
 
-  // Persist and react to notifications toggle
   Future<void> _updateNotificationsEnabled(bool enabled) async {
-    setState(() {
-      _notificationsEnabled = enabled;
-    });
+    setState(() => _notificationsEnabled = enabled);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('notificationsEnabled', _notificationsEnabled);
-    if (enabled && Platform.isAndroid) {
+    await prefs.setBool('notificationsEnabled', enabled);
+
+    if (enabled && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       final androidImpl = flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
@@ -338,180 +161,312 @@ class _CustomizationPageState extends State<CustomizationPage> {
         if (allowed == false) {
           await androidImpl?.requestNotificationsPermission();
         }
-        // If enabled (or just granted), pop a test notification immediately
         final nowAllowed = await androidImpl?.areNotificationsEnabled();
         if (nowAllowed != false) {
           await NotificationHelper.showTestNotification(
-            message:
-                'Reminders are enabled. Daily tracking keeps you on budget!',
+            message: 'Reminders are enabled. Daily tracking keeps you on budget!',
           );
         }
       } catch (e) {
-        print('Permission request failed: $e');
+        debugPrint('Permission request failed: $e');
       }
     }
-    if (!enabled) {
-      if (Platform.isAndroid ||
-          Platform.isIOS ||
-          Platform.isMacOS ||
-          Platform.isLinux) {
-        await flutterLocalNotificationsPlugin.cancelAll();
-      }
+
+    if (!enabled && _supportsNotifications) {
+      await flutterLocalNotificationsPlugin.cancelAll();
     }
   }
 
-  // NEW: Helper widget for the notification toggle switch
-  Widget _buildNotificationToggle() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Text(
-          'Enable Expense Reminders',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+  void _showTopSnackBar(String message) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => Positioned(
+        top: MediaQuery.of(context).padding.top + 16,
+        left: 16,
+        right: 16,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2E3A59),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, color: Colors.white70, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => entry.remove(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        Switch(
-          value: _notificationsEnabled,
-          onChanged: (bool newValue) {
-            _updateNotificationsEnabled(newValue);
-          },
-        ),
-      ],
+      ),
     );
 
-    // Navigation handled after saving; keep toggle focused on UI state only
+    overlay.insert(entry);
+    Future.delayed(const Duration(seconds: 3), () {
+      if (entry.mounted) entry.remove();
+    });
+  }
+
+  // ignore: unused_element
+  Future<void> _checkPendingNotifications() async {
+    if (_supportsNotifications) {
+      final pending = await flutterLocalNotificationsPlugin.pendingNotificationRequests();
+      _showTopSnackBar('Pending reminders: ${pending.length}');
+      return;
+    }
+    _showTopSnackBar('Notifications are not supported on this platform.');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              const SizedBox(height: 50),
-              // --- Title Section ---
-              const Text(
-                'Customize your budget and notifications.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 30),
-
-              // --- 1. Set Your Budget ---
-              _buildSectionTitle('Set your budget'),
-              _buildBudgetInputField(),
-              const SizedBox(height: 20),
-
-              // --- 2. Choose Your Budget Cycle ---
-              _buildSectionTitle('Choose your budget cycle'),
-              _buildDropdownSelector(
-                value: _selectedBudgetFrequency,
-                items: _budgetFrequencies,
-                onChanged: (newValue) {
-                  setState(() {
-                    _selectedBudgetFrequency = newValue!;
-                  });
-                },
-              ),
-              const SizedBox(height: 20),
-
-              const Divider(height: 30),
-
-              // --- NOTIFICATION TOGGLE ---
-              _buildNotificationToggle(),
-              const SizedBox(height: 20),
-
-              // --- Reminder settings (hidden when notifications disabled) ---
-              Visibility(
-                visible: _notificationsEnabled,
-                maintainState: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildSectionTitle('Set your reminder frequency'),
-                    _buildReminderRow(context),
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
-
-              // --- 4. Done Button ---
-              ElevatedButton(
-                onPressed: _saveCustomizations,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(
-                    double.infinity,
-                    50,
-                  ), // Full width button
-                  backgroundColor: Colors.blue[900], // Dark color from Figma
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+      backgroundColor: const Color(0xFFE8EDF3),
+      body: Stack(
+        children: [
+          const _Bubble(top: -30, right: -20, size: 160, opacity: 0.45),
+          const _Bubble(top: 40, right: 30, size: 80, opacity: 0.30),
+          const _Bubble(bottom: -40, left: -30, size: 180, opacity: 0.35),
+          const _Bubble(bottom: 60, left: 20, size: 90, opacity: 0.25),
+          const _Bubble(bottom: 180, right: -10, size: 110, opacity: 0.20),
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Customizations',
+                    textAlign: TextAlign.left,
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: _navy,
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                ),
-                child: const Text(
-                  'Done',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                  const SizedBox(height: 20),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _cardBg,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'Shape your account around\nyour habits and goals.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: _bodyText,
+                            height: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        _buildLabel('Set your budget'),
+                        _buildBudgetInputField(),
+                        const SizedBox(height: 16),
+                        _buildLabel('Choose your budget cycle'),
+                        _buildDropdownSelector(
+                          value: _selectedBudgetFrequency,
+                          items: _budgetFrequencies,
+                          onChanged: (v) => setState(() => _selectedBudgetFrequency = v!),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildNotificationToggle(),
+                        Visibility(
+                          visible: _notificationsEnabled,
+                          maintainState: true,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Divider(color: _divider, height: 28),
+                              _buildLabel('Set your reminder frequency'),
+                              _buildReminderRow(context),
+                              const SizedBox(height: 4),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            // 1. Show an immediate snackbar so you know the timer started
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Timer started! Lock your phone now.")),
+                            );
+
+                            // 2. Trigger the 10-second background timer
+                            await NotificationHelper.scheduleOneShotTest(delay: const Duration(seconds: 10));
+                          },
+                          icon: const Icon(Icons.timer, color: Colors.white),
+                          label: const Text("Test 10s Timer"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orangeAccent, // Different color so it stands out
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+
+                        // System Alarms
+                        ElevatedButton(
+                          onPressed: () async {
+                            final List<PendingNotificationRequest> pendingReqs = 
+                                await flutterLocalNotificationsPlugin.pendingNotificationRequests();
+                            
+                            showDialog(
+                              context: context,
+                              builder: (_) => AlertDialog(
+                                title: Text("System Alarms: ${pendingReqs.length}"),
+                                content: Text(pendingReqs.isEmpty 
+                                  ? "Nothing scheduled!" 
+                                  : "Scheduled: ${pendingReqs[0].title}"),
+                              ),
+                            );
+                          },
+                          child: const Text("Check Samsung Alarm List"),
+                        ),
+                                              
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: _saveCustomizations,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _navy,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Done',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              
-              
-            ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: _bodyText,
         ),
       ),
     );
   }
 
-  // Helper widget for section titles
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 16, color: Colors.black54),
-      ),
-    );
-  }
-
-  // Helper widget for the budget input field
   Widget _buildBudgetInputField() {
     return TextField(
       controller: _budgetController,
       keyboardType: TextInputType.number,
+      style: const TextStyle(fontSize: 15, color: _bodyText),
       decoration: InputDecoration(
-        hintText: _savedBudget != null
-            ? _formatCurrency(_savedBudget!)
-            : 'Enter your budget here... ',
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 16,
+        filled: true,
+        fillColor: _fieldBg,
+        hintText: _savedBudget != null ? _formatCurrency(_savedBudget!) : 'Enter your budget here...',
+        hintStyle: const TextStyle(color: _hintText, fontSize: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: _navy, width: 1.5),
         ),
       ),
     );
   }
 
-  // Helper widget for a generic dropdown selector
   Widget _buildDropdownSelector({
     required String value,
     required List<String> items,
     required ValueChanged<String?> onChanged,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(8.0),
+        color: _fieldBg,
+        borderRadius: BorderRadius.circular(10),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down),
-          items: items.map<DropdownMenuItem<String>>((String item) {
+          icon: const Icon(Icons.keyboard_arrow_down, color: _bodyText),
+          style: const TextStyle(
+            color: _bodyText,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+          dropdownColor: _fieldBg,
+          items: items.map((item) {
             return DropdownMenuItem<String>(value: item, child: Text(item));
           }).toList(),
           onChanged: onChanged,
@@ -520,69 +475,104 @@ class _CustomizationPageState extends State<CustomizationPage> {
     );
   }
 
-  // Helper widget for the reminder frequency and time row
+  Widget _buildNotificationToggle() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          'Enable Expense Reminders',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: _bodyText,
+          ),
+        ),
+        Switch(
+          value: _notificationsEnabled,
+          activeThumbColor: _navy,
+          onChanged: _updateNotificationsEnabled,
+        ),
+      ],
+    );
+  }
+
   Widget _buildReminderRow(BuildContext context) {
     return Row(
       children: [
-        // Dropdown for Frequency (e.g., Daily)
         Expanded(
           flex: 3,
           child: _buildDropdownSelector(
             value: _selectedReminderFrequency,
             items: _reminderFrequencies,
-            onChanged: (newValue) {
-              setState(() {
-                _selectedReminderFrequency = newValue!;
-              });
-            },
+            onChanged: (v) => setState(() => _selectedReminderFrequency = v!),
           ),
         ),
         const SizedBox(width: 10),
-        // Time Button (e.g., 8:00 PM)
         Expanded(
           flex: 2,
           child: OutlinedButton(
             onPressed: () => _selectTime(context),
             style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              side: const BorderSide(color: Colors.grey),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              backgroundColor: _fieldBg,
+              foregroundColor: _bodyText,
+              side: BorderSide.none,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            child: Text(
-              _selectedTime.format(context),
-              style: const TextStyle(fontSize: 16, color: Colors.black),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _selectedTime.format(context),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: _bodyText,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.access_time_rounded, size: 16, color: _bodyText),
+              ],
             ),
           ),
         ),
       ],
     );
   }
+}
 
-  // Inspect currently scheduled notifications for debugging/test
-  // ignore: unused_element
-  Future<void> _checkPendingNotifications() async {
-    if (Platform.isAndroid ||
-        Platform.isIOS ||
-        Platform.isMacOS ||
-        Platform.isLinux) {
-      final pending = await flutterLocalNotificationsPlugin
-          .pendingNotificationRequests();
-      for (final p in pending) {
-        print(
-          'Pending: id=${p.id}, title=${p.title}, body=${p.body}, payload=${p.payload}',
-        );
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Pending reminders: ${pending.length}')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Notifications are not supported on Windows.'),
+class _Bubble extends StatelessWidget {
+  final double? top;
+  final double? bottom;
+  final double? left;
+  final double? right;
+  final double size;
+  final double opacity;
+
+  const _Bubble({
+    this.top,
+    this.bottom,
+    this.left,
+    this.right,
+    required this.size,
+    required this.opacity,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: top,
+      bottom: bottom,
+      left: left,
+      right: right,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withValues(alpha: opacity),
         ),
-      );
-    }
+      ),
+    );
   }
 }
