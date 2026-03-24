@@ -6,6 +6,7 @@ import 'monthly_view.dart';
 import 'expenses/edit/edit_expense_page.dart';
 import '../utils/date_utils.dart';
 import 'builders/widgets/home/day_page.dart';
+import 'settings_page.dart';  
 
 class HomePage extends StatefulWidget {
   final VoidCallback? onSummaryTap;
@@ -222,6 +223,18 @@ class _HomePageState extends State<HomePage>
             padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
             child: IconButton(
               icon: const Icon(Icons.calendar_month, color: Colors.black),
+              IconButton(
+              icon: const Icon(Icons.settings, color: Colors.black),
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsPage()),
+                );
+
+                // Reload after returning
+                _loadBudget();
+              },
+            ),
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const MonthlyViewPage()),
