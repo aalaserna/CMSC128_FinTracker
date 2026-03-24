@@ -12,8 +12,7 @@ class SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
+    return Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           color: const Color(0xFFDCE8F5),
@@ -40,7 +39,7 @@ class SummaryCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
+      
     );
   }
 }

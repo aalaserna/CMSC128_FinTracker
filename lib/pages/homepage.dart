@@ -8,7 +8,9 @@ import '../utils/date_utils.dart';
 import 'builders/widgets/home/day_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final VoidCallback? onSummaryTap;
+
+  const HomePage({super.key, this.onSummaryTap});
 
   static double userBudget = 0.0;
   static final List<Expense> expenses = [];
@@ -298,6 +300,7 @@ class _HomePageState extends State<HomePage>
                 userBudget: HomePage.userBudget,
                 onEdit: _openEditExpenseDialog,
                 onDelete: _deleteExpenseWithUndo,
+                onSummaryTap: widget.onSummaryTap ?? () {},
               )).toList(),
             ),
           ),

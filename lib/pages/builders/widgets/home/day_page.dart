@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../expense_model.dart';
 import '../../../../utils/date_utils.dart';
 import '../../../../utils/expense_calculations.dart';
+import '../../../summary.dart';
 import 'summary_card.dart';
 import 'transaction_item.dart';
 
@@ -12,6 +13,7 @@ class DayPage extends StatelessWidget {
   final double userBudget;
   final void Function(int realIndex) onEdit;
   final void Function(Expense item, int realIndex) onDelete;
+  final VoidCallback onSummaryTap;
 
   const DayPage({
     super.key,
@@ -21,6 +23,7 @@ class DayPage extends StatelessWidget {
     required this.userBudget,
     required this.onEdit,
     required this.onDelete,
+    required this.onSummaryTap,
   });
 
   @override
@@ -30,7 +33,7 @@ class DayPage extends StatelessWidget {
         .toList();
 
     final dayName = [
-      'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
+      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
     ][date.weekday - 1];
     final dateString = '$dayName, ${date.day}';
 
@@ -42,20 +45,28 @@ class DayPage extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              SummaryCard(
-                title: 'Weekly Expenses',
-                amount: '₱${calculateWeeklySpent(allExpenses, weekDates).toStringAsFixed(2)}',
+              Expanded(
+                child: SummaryCard(
+                  title: 'Weekly Expenses',
+                  amount: '₱${calculateWeeklySpent(allExpenses, weekDates).toStringAsFixed(2)}',
+                )),
+              const SizedBox(width: 8),
+              // Balance Left Button
+              Expanded(
+                child: GestureDetector(
+                  onTap: onSummaryTap,
+                  child: SummaryCard(
+                    title: 'Balance Left',
+                    amount: getBalanceLeft(allExpenses, weekDates, userBudget),
+                  ),
+                )
               ),
               const SizedBox(width: 8),
-              SummaryCard(
-                title: 'Balance Left',
-                amount: getBalanceLeft(allExpenses, weekDates, userBudget),
-              ),
-              const SizedBox(width: 8),
-              SummaryCard(
-                title: 'Savings',
-                amount: getSavings(allExpenses, weekDates, userBudget),
-              ),
+              Expanded(
+                child: SummaryCard(
+                  title: 'Savings',
+                  amount: getSavings(allExpenses, weekDates, userBudget),
+                )),
             ],
           ),
         ),
@@ -86,7 +97,7 @@ class DayPage extends StatelessWidget {
           child: dayExpenses.isEmpty
               ? Center(
                   child: Text(
-                    'No expenses for $dayName.',
+                    'You have no expenses for $dayName.',
                     style: TextStyle(color: Colors.grey[400], fontSize: 16),
                   ),
                 )
