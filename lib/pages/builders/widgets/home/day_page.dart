@@ -11,6 +11,8 @@ class DayPage extends StatelessWidget {
   final List<Expense> allExpenses;
   final List<DateTime> weekDates;
   final double userBudget;
+  final String budgetMode;
+  final double monthlySpent;
   final void Function(int realIndex) onEdit;
   final void Function(Expense item, int realIndex) onDelete;
   final VoidCallback onSummaryTap;
@@ -21,6 +23,8 @@ class DayPage extends StatelessWidget {
     required this.allExpenses,
     required this.weekDates,
     required this.userBudget,
+    required this.budgetMode,
+    required this.monthlySpent,
     required this.onEdit,
     required this.onDelete,
     required this.onSummaryTap,
@@ -42,14 +46,42 @@ class DayPage extends StatelessWidget {
         // Summary cards row
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
+           children: [
+            Expanded(
+              child: SummaryCard(
+                title: budgetMode == 'monthly'
+                    ? 'Spent This Month'
+                    : 'Spent This Week',
+                amount: budgetMode == 'monthly'
+                    ? '₱${monthlySpent.toStringAsFixed(2)}'
+                    : '₱${calculateWeeklySpent(allExpenses, weekDates).toStringAsFixed(2)}',
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Balance Left Button
+            Expanded(
+              child: GestureDetector(
+                onTap: onSummaryTap,
                 child: SummaryCard(
-                  title: 'Spent This Week',
-                  amount: '₱${calculateWeeklySpent(allExpenses, weekDates).toStringAsFixed(2)}',
-                )),
+                  title: 'Left to Spend',
+                  amount: budgetMode == 'monthly'
+                      ? '₱${(userBudget - monthlySpent).toStringAsFixed(2)}'
+                      : getBalanceLeft(allExpenses, weekDates, userBudget),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            Expanded(
+              child: SummaryCard(
+                title: 'Savings',
+                amount: budgetMode == 'monthly'
+                    ? '₱${(userBudget - monthlySpent < 0 ? 0 : userBudget - monthlySpent).toStringAsFixed(2)}'
+                    : getSavings(allExpenses, weekDates, userBudget),
+              ),
+            ),
+          ],
               const SizedBox(width: 8),
               // Balance Left Button
               Expanded(
