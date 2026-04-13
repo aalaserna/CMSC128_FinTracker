@@ -6,7 +6,7 @@ import 'monthly_view.dart';
 import 'expenses/edit/edit_expense_page.dart';
 import '../utils/date_utils.dart';
 import 'builders/widgets/home/day_page.dart';
-import 'settings_page.dart';  
+import 'customizations.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback? onSummaryTap;
@@ -218,28 +218,22 @@ class _HomePageState extends State<HomePage>
         ),
         centerTitle: true,
         actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
-            child: IconButton(
-              icon: const Icon(Icons.calendar_month, color: Colors.black),
-              IconButton(
-              icon: const Icon(Icons.settings, color: Colors.black),
-              onPressed: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SettingsPage()),
-                );
-
-                // Reload after returning
-                _loadBudget();
-              },
+          IconButton(
+            icon: const Icon(Icons.calendar_month, color: Colors.black),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MonthlyViewPage()),
             ),
-              onPressed: () => Navigator.push(
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.black),
+            onPressed: () async {
+              await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const MonthlyViewPage()),
-              ),
-            ),
+                MaterialPageRoute(builder: (_) => const CustomizationPage()),
+              );
+              _loadBudget();
+            },
           ),
         ],
       ),
