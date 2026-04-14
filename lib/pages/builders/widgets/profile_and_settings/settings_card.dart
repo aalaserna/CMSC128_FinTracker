@@ -4,6 +4,8 @@ Widget buildItemRow({
   required dynamic theme,
   required String label,
   required IconData icon,
+  Widget? trailing,
+  VoidCallback? onTap,
   bool isFirstRow = false,
   bool isLastRow = false,
 }){
@@ -22,23 +24,10 @@ Widget buildItemRow({
           child: ListTile(
             leading: Icon(icon, color: theme.icon),
             title: Text(label, style: TextStyle(color: theme.bodyText)),
-            onTap: () {},
-            trailing: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: theme.containerDivider,
-                  width: 2,
-                ),
-              ),
-              child: CircleAvatar(
-                radius: 8,
-                backgroundColor: theme.pageBackground,
-              ),
+            onTap: onTap,
+            trailing: trailing,
             ),
           ),
-        ),
         if (!isLastRow) Divider(height: 1, color: theme.divider, indent: 16, endIndent: 16),
       ],
     ),

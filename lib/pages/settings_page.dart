@@ -1,3 +1,4 @@
+import 'package:fins/pages/builders/widgets/profile_and_settings/theme_selector_popup.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -13,7 +14,13 @@ import 'builders/widgets/profile_and_settings/settings_card.dart';
 // this is just a temporary template to access the theme colors
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+
+  final dynamic theme;
+
+  const SettingsPage({
+    super.key,
+    required this.theme
+  });
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -28,8 +35,11 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context){
+
+    final theme = widget.theme;
+
     return Scaffold(
-      backgroundColor: AppColors.blue.pageBackground,
+      backgroundColor: theme.pageBackground,
       body: Stack(
         children: [
           const _Bubble(top: -30, right: -20, size: 160, opacity: 0.45),
@@ -81,12 +91,31 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                   const SizedBox(height: 40),
-                  buildItemRow(isFirstRow: true, theme: AppColors.blue, label: "Change theme", icon: Icons.palette),
+                  buildItemRow(isFirstRow: true, theme: theme, label: "Change theme", icon: Icons.palette,
+                    onTap: (){
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context){
+                          return ThemeSelectorPopup(theme: theme);
+                        }
+                      );
+                    },
+                    trailing: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: theme.containerDivider,
+                          width: 2,
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        radius: 8,
+                        backgroundColor: theme.pageBackground,
+                      ),
+                    ),
+                  ),
                   // the following items below are just temporary, kindly change it to the proper settings items
-                  buildItemRow(theme: AppColors.blue, label: "Change theme", icon: Icons.palette),
-                  buildItemRow(theme: AppColors.blue, label: "Change theme", icon: Icons.palette),
-                  buildItemRow(theme: AppColors.blue, label: "Change theme", icon: Icons.palette),
-                  buildItemRow(theme: AppColors.blue, label: "Change theme", icon: Icons.palette),
                   buildItemRow(theme: AppColors.blue, label: "Change theme", icon: Icons.palette),
                   buildItemRow(isLastRow: true, theme: AppColors.blue, label: "Change theme", icon: Icons.palette),
                 ],
