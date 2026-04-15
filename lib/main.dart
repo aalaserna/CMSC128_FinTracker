@@ -1,4 +1,6 @@
 import 'package:fins/database/db_helper.dart';
+import 'package:fins/themes/constants/app_colors.dart';
+import 'package:fins/themes/logic/app_themes.dart';
 import 'package:flutter/material.dart';
 import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
 import 'package:flutter/foundation.dart';
@@ -11,13 +13,16 @@ import 'pages/profile.dart';
 import 'pages/expense_model.dart';
 import 'pages/landing.dart';
 import 'utils/notification_helper.dart';
-
+import 'pages/settings_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart'; 
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+// import for app theme controller
+import 'package:fins/themes/logic/theme_controller.dart';
 
 /*
 ===============
@@ -85,23 +90,29 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: FutureBuilder<bool>(
-        future: _showLandingFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          final showLanding = snapshot.data ?? true;
-          if (showLanding) {
-            return const LandingPage();
-          }
-          return const ExpenseHomePage();
-        },
-      ),
+    return ValueListenableBuilder<AppThemeType>(
+      valueListenable: ThemeController.notifier,
+      builder: (context, themeType, _){
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: getTheme(themeType), // integrate this with your shared preferences for dynamic theme
+          home: FutureBuilder<bool>(
+            future: _showLandingFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+              final showLanding = snapshot.data ?? true;
+              if (showLanding) {
+                return const LandingPage();
+              }
+              return const ExpenseHomePage();
+            },
+          ),
+        );
+      }
     );
   }
 }
@@ -181,17 +192,17 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       ),
       const SummaryPage(),
       const CustomizationPage(),
-      const ProfilePage(), 
+      const SettingsPage(),  // temp settings instead of profile page for now, sorry guys need ko dnay ibypass
     ];
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      // Light blue/grey background from wireframe
-      backgroundColor: const Color(0xFFF5F7FA), 
+      // JAS: i removed the scaffold bg here since the color scheme from app themes is now applied here automatically
       body: pages[_bottomNavIndex],
       // Code for the add button
       floatingActionButton: FloatingActionButton(
         shape: const CircleBorder(), // <--- Makes the button perfectly round
+        backgroundColor: context.primary,
         onPressed: () async {
           // Check if we are in Home Page (index 0)
           if (_bottomNavIndex == 0) {
@@ -220,8 +231,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
             setState(() => _bottomNavIndex = 0);
           }
         },
-        backgroundColor: const Color(0xFF5E6C85), // Wireframe blue color
-        child: const Icon(Icons.add, color: Colors.white),
+        child: Icon(Icons.add, color: context.surface),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       
@@ -234,8 +244,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
             notchSmoothness: NotchSmoothness.softEdge,
             leftCornerRadius: 32,
             rightCornerRadius: 32,
-            activeColor: const Color(0xFF5E6C85),
-            inactiveColor: Colors.grey,
+            activeColor: context.onPrimary,
+            inactiveColor: context.onPrimary.withOpacity(0.3),
             // Update the state (selected index) when tapping a tab
             onTap: (index) {
               setState(() => _bottomNavIndex = index);
