@@ -77,6 +77,16 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+  fonts:
+    - family: Twigs
+      fonts:
+        - asset: assets/fonts/Twigs.otf
+    - family: Anise
+      fonts:
+        - asset: assets/fonts/Anise.otf
+    - family: Helvetica
+      fonts:
+        - asset: assets/fonts/Helvetica.ttf
 
 # App icon generation (run: `dart run flutter_launcher_icons`)
 flutter_launcher_icons:

@@ -19,6 +19,8 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart'; 
 
+const bool kDebugForceLandingPage = true;
+
 /*
 ===============
   ENTRY POINT
@@ -107,6 +109,10 @@ class _MyAppState extends State<MyApp> {
 }
 
 Future<bool> _shouldShowLanding() async {
+  if (kDebugMode && kDebugForceLandingPage) {
+    return true;
+  }
+
   final prefs = await SharedPreferences.getInstance();
   final onboardingComplete = prefs.getBool('hasCompletedOnboarding');
   if (onboardingComplete != null) {
