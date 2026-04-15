@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+// import for app themes
+import 'package:fins/themes/logic/app_themes.dart';
+
 class Bubble extends StatelessWidget {
   final double? top, bottom, left, right;
   final double size;
@@ -27,7 +30,7 @@ class Bubble extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white.withOpacity(opacity),
+          color: context.bubble.withOpacity(opacity),
         ),
       ),
     );

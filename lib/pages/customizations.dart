@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
+import 'builders/designs/bubble_background.dart';
+import 'package:fins/themes/logic/app_themes.dart';
 
 import '../main.dart';
 import '../utils/notification_helper.dart';
@@ -13,13 +15,6 @@ bool get _supportsNotifications =>
         defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.linux);
-
-const _navy = Color(0xFF1C2340);
-const _cardBg = Color(0xFFBFC8D6);
-const _fieldBg = Colors.white;
-const _bodyText = Color(0xFF2E3A59);
-const _hintText = Color(0xFF8A9BB5);
-const _divider = Color(0xFFD0D7E2);
 
 class CustomizationPage extends StatefulWidget {
   const CustomizationPage({super.key});
@@ -160,47 +155,46 @@ class _CustomizationPageState extends State<CustomizationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFE8EDF3),
       body: Stack(
         children: [
-          const _Bubble(top: -30, right: -20, size: 160, opacity: 0.45),
-          const _Bubble(top: 40, right: 30, size: 80, opacity: 0.30),
-          const _Bubble(bottom: -40, left: -30, size: 180, opacity: 0.35),
-          const _Bubble(bottom: 60, left: 20, size: 90, opacity: 0.25),
-          const _Bubble(bottom: 180, right: -10, size: 110, opacity: 0.20),
+          const Bubble(top: -30, right: -20, size: 160, opacity: 0.45),
+          const Bubble(top: 40, right: 30, size: 80, opacity: 0.30),
+          const Bubble(bottom: -40, left: -30, size: 180, opacity: 0.35),
+          const Bubble(bottom: 60, left: 20, size: 90, opacity: 0.25),
+          const Bubble(bottom: 180, right: -10, size: 110, opacity: 0.20),
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
+                  Text(
                     'Customizations',
                     textAlign: TextAlign.left,
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
-                      color: _navy,
+                      color: context.onPrimary,
                       letterSpacing: -0.5,
                     ),
                   ),
                   const SizedBox(height: 20),
                   Container(
                     decoration: BoxDecoration(
-                      color: _cardBg,
+                      color: context.surface,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text(
+                        Text(
                           'Shape your account around\nyour habits and goals.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: _bodyText,
+                            color: context.onSurface,
                             height: 1.2,
                           ),
                         ),
@@ -223,7 +217,7 @@ class _CustomizationPageState extends State<CustomizationPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const Divider(color: _divider, height: 28),
+                              Divider(color: context.surface, height: 28),
                               _buildLabel('Set your reminder frequency'),
                               _buildReminderRow(context),
                               const SizedBox(height: 4),
@@ -236,8 +230,8 @@ class _CustomizationPageState extends State<CustomizationPage> {
                           child: ElevatedButton(
                             onPressed: _saveCustomizations,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: _navy,
-                              foregroundColor: Colors.white,
+                              backgroundColor: context.primary,
+                              foregroundColor: context.surface,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -270,10 +264,10 @@ class _CustomizationPageState extends State<CustomizationPage> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w500,
-          color: _bodyText,
+          color: context.onSurface,
         ),
       ),
     );
@@ -283,14 +277,14 @@ class _CustomizationPageState extends State<CustomizationPage> {
     return TextField(
       controller: _budgetController,
       keyboardType: TextInputType.number,
-      style: const TextStyle(fontSize: 15, color: _bodyText),
+      style: TextStyle(fontSize: 15, color: context.onPrimary),
       decoration: InputDecoration(
         filled: true,
-        fillColor: _fieldBg,
+        fillColor: context.onSurface.withOpacity(0.1),
         hintText: _savedBudget != null
             ? _formatCurrency(_savedBudget!)
             : 'Enter your budget here...',
-        hintStyle: const TextStyle(color: _hintText, fontSize: 14),
+        hintStyle: TextStyle(color: context.hintText, fontSize: 14),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
@@ -302,7 +296,7 @@ class _CustomizationPageState extends State<CustomizationPage> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _navy, width: 1.5),
+          borderSide: BorderSide(color: context.primary, width: 1.5),
         ),
       ),
     );
@@ -316,20 +310,20 @@ class _CustomizationPageState extends State<CustomizationPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: _fieldBg,
+        color: context.surface,
         borderRadius: BorderRadius.circular(10),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down, color: _bodyText),
-          style: const TextStyle(
-            color: _bodyText,
+          icon: Icon(Icons.keyboard_arrow_down, color: context.primary),
+          style: TextStyle(
+            color: context.primary,
             fontSize: 15,
             fontWeight: FontWeight.w500,
           ),
-          dropdownColor: _fieldBg,
+          dropdownColor: context.surface,
           items: items.map((item) {
             return DropdownMenuItem<String>(value: item, child: Text(item));
           }).toList(),
@@ -343,17 +337,17 @@ class _CustomizationPageState extends State<CustomizationPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
+        Text(
           'Enable Expense Reminders',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: _bodyText,
+            color: context.primary,
           ),
         ),
         Switch(
           value: _notificationsEnabled,
-          activeThumbColor: _navy,
+          activeThumbColor: context.primary,
           onChanged: _updateNotificationsEnabled,
         ),
       ],
@@ -377,8 +371,8 @@ class _CustomizationPageState extends State<CustomizationPage> {
           child: OutlinedButton(
             onPressed: () => _selectTime(context),
             style: OutlinedButton.styleFrom(
-              backgroundColor: _fieldBg,
-              foregroundColor: _bodyText,
+              backgroundColor: context.surface.withOpacity(0.1),
+              foregroundColor: context.primary,
               side: BorderSide.none,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -390,59 +384,23 @@ class _CustomizationPageState extends State<CustomizationPage> {
               children: [
                 Text(
                   _selectedTime.format(context),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: _bodyText,
+                    color: context.primary,
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Icon(
+                Icon(
                   Icons.access_time_rounded,
                   size: 16,
-                  color: _bodyText,
+                  color: context.primary,
                 ),
               ],
             ),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _Bubble extends StatelessWidget {
-  final double? top;
-  final double? bottom;
-  final double? left;
-  final double? right;
-  final double size;
-  final double opacity;
-
-  const _Bubble({
-    this.top,
-    this.bottom,
-    this.left,
-    this.right,
-    required this.size,
-    required this.opacity,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      top: top,
-      bottom: bottom,
-      left: left,
-      right: right,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withOpacity(opacity),
-        ),
-      ),
     );
   }
 }
