@@ -9,7 +9,7 @@ import 'pages/homepage.dart';
 import 'pages/summary.dart';
 import 'pages/customizations.dart';
 import 'pages/expenses/add/add_expense_page.dart'; 
-import 'pages/profile.dart';
+import 'pages/finance_insights.dart';
 import 'pages/expense_model.dart';
 import 'pages/landing.dart';
 import 'utils/notification_helper.dart';
@@ -211,9 +211,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
               });
             }
           } else {
-            /* If user presses the floating action btn while on another tab,
-               Default to Home Page
-             */
             setState(() => _bottomNavIndex = 0);
           }
         },
