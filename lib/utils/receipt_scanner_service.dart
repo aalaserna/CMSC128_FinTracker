@@ -33,7 +33,9 @@ class ReceiptScannerService {
           "storeNames": {
             "JOLLIBEE": "Jollibee",
             "SM MARKET": "SM",
-            "PUREGOLD": "Puregold"
+            "PUREGOLD": "Puregold",
+            "7-ELEVEN": "7-Eleven",
+            "PRINCE": "Prince Hypermart",
           },
           "totalLabels": {
             "TOTAL": "Total",
@@ -61,6 +63,20 @@ class ReceiptScannerService {
       if (pickedFile == null) return null;
 
       final inputImage = InputImage.fromFilePath(pickedFile.path);
+      final textRecognizer = TextRecognizer();
+      final recognizedText = await textRecognizer.processImage(inputImage);
+      textRecognizer.close();
+
+      // Get first meaningful line as store name
+      String? rawStoreName;
+      for (final block in recognizedText.blocks) {
+        final line = block.text.trim();
+        if (line.isNotEmpty && line.length > 2) {
+          rawStoreName = line;
+          break;
+        }
+      }
+
       final snapshot = await _recognizer.processImage(inputImage);
 
       // Extract items
@@ -71,8 +87,12 @@ class ReceiptScannerService {
             .toList();
       }
 
+      final storeName = (snapshot.store?.value != null && snapshot.store!.value.length > 3)
+        ? snapshot.store!.value
+        : rawStoreName;
+
       return ReceiptData(
-        storeName: snapshot.store?.value,
+        storeName: storeName,
         total: snapshot.total?.formattedValue,
         items: items,
         isValid: snapshot.isValid,

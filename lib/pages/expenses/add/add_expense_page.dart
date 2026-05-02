@@ -12,6 +12,7 @@ import '../../../utils/receipt_scanner_service.dart';
 class AddExpensePage extends StatefulWidget {
   final DateTime initialDate;
   const AddExpensePage({super.key, required this.initialDate});
+  
 
   @override
   State<AddExpensePage> createState() => _AddExpensePageState();
@@ -19,6 +20,8 @@ class AddExpensePage extends StatefulWidget {
 
 class _AddExpensePageState extends State<AddExpensePage> {
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
   String name     = '';
   String amount   = '';
   String category = 'food';
@@ -48,32 +51,32 @@ class _AddExpensePageState extends State<AddExpensePage> {
       }
 
       setState(() {
-        // Prefill amount from receipt total
-        if (receiptData.total != null) {
-          amount = receiptData.total!;
-        }
+      if (receiptData.total != null) {
+        amount = receiptData.total!;
+        _amountController.text = receiptData.total!;
+      }
 
-        // Prefill name from store name
-        if (receiptData.storeName != null && receiptData.storeName!.isNotEmpty) {
-          name = receiptData.storeName!;
-        }
+      if (receiptData.storeName != null && receiptData.storeName!.isNotEmpty) {
+        name = receiptData.storeName!;
+        _nameController.text = receiptData.storeName!;
+      }
 
-        // Store items details
-        if (receiptData.items.isNotEmpty) {
-          details = receiptData.items.join("\n");
-        }
+      if (receiptData.items.isNotEmpty) {
+        details = receiptData.items.join("\n");
+      }
 
-        isProcessing = false;
-      });
+      isProcessing = false;
+    });
 
       // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Receipt scanned successfully!'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+      if (receiptData.total == null && receiptData.storeName == null && receiptData.items.isEmpty) {
+        setState(() => isProcessing = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No receipt data detected. Try a clearer image.')),
+          );
+        }
+        return;
       }
     } catch (e) {
       setState(() => isProcessing = false);
@@ -136,6 +139,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                             buildLabel('Title'),
                             buildTextInput(
                               hint: 'Enter description here',
+                              controller: _nameController,  
                               onChanged: (v) => name = v,
                               validator: (v) =>
                                   v == null || v.isEmpty ? 'Enter a name' : null,
@@ -146,6 +150,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                             buildLabel('Amount'),
                             buildTextInput(
                               hint: 'Enter amount here',
+                              controller: _amountController, 
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
                               inputFormatters: [
                                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
@@ -288,6 +293,8 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
   @override
   void dispose() {
+    _nameController.dispose();
+    _amountController.dispose();
     ReceiptScannerService.dispose();
     super.dispose();
   }

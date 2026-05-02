@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.fins"
     // Pin to installed Android API level (user uses API 36)
-    compileSdk = 36
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -30,7 +30,7 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion //flutter.minSdkVersion
         // Match targetSdk to installed API level
-        targetSdk = 36
+        targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
