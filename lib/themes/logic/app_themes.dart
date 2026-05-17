@@ -1,4 +1,3 @@
-import 'package:fins/pages/builders/designs/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:fins/themes/constants/app_colors.dart';
 import 'package:fins/themes/constants/app_theme_type.dart';
@@ -96,50 +95,16 @@ class AppThemes {
     hintText: AppColors.blue.hintText
   );
 
-  static ThemeData get green => _build(
-    background: AppColors.pink.pageBackground,
-    primary: AppColors.pink.activeElement,
-    surface: AppColors.pink.cardBackground,
-    onPrimary: AppColors.pink.pageTitleText,
-    onSurface: AppColors.pink.bodyText,
-    bubble: AppColors.pink.bubble,
-    themeItemIcon: AppColors.green.themeItemIcon,
-    hintText: AppColors.blue.hintText
+  static ThemeData get yellow => _build(
+    background: AppColors.yellow.pageBackground,
+    primary: AppColors.yellow.confirmButton,
+    surface: AppColors.yellow.cardBackground,
+    onPrimary: AppColors.yellow.pageTitleText,
+    onSurface: AppColors.yellow.bodyText,
+    bubble: AppColors.yellow.bubble,
+    themeItemIcon: AppColors.yellow.themeItemIcon,
+    hintText: AppColors.yellow.hintText
   );
-
-  static ThemeData get orange => _build(
-    background: AppColors.pink.pageBackground,
-    primary: AppColors.pink.activeElement,
-    surface: AppColors.pink.cardBackground,
-    onPrimary: AppColors.pink.pageTitleText,
-    onSurface: AppColors.pink.bodyText,
-    bubble: AppColors.pink.bubble,
-    themeItemIcon: AppColors.orange.themeItemIcon,
-    hintText: AppColors.blue.hintText
-  );
-
-  static ThemeData get cyan => _build(
-    background: AppColors.pink.pageBackground,
-    primary: AppColors.pink.activeElement,
-    surface: AppColors.pink.cardBackground,
-    onPrimary: AppColors.pink.pageTitleText,
-    onSurface: AppColors.pink.bodyText,
-    bubble: AppColors.pink.bubble,
-    themeItemIcon: AppColors.cyan.themeItemIcon,
-    hintText: AppColors.blue.hintText
-  );
-
-  static ThemeData get purple => _build(
-    background: AppColors.pink.pageBackground,
-    primary: AppColors.pink.activeElement,
-    surface: AppColors.pink.cardBackground,
-    onPrimary: AppColors.pink.pageTitleText,
-    onSurface: AppColors.pink.bodyText,
-    bubble: AppColors.pink.bubble,
-    themeItemIcon: AppColors.purple.themeItemIcon,
-    hintText: AppColors.blue.hintText
-  );
-
 
 }
 
@@ -164,15 +129,7 @@ ThemeData getTheme(AppThemeType type) {
       return AppThemes.blue;
     case AppThemeType.pink:
       return AppThemes.pink;
-    case AppThemeType.green:
-      return AppThemes.green;
-    case AppThemeType.orange:
-      return AppThemes.orange;
-    case AppThemeType.cyan:
-      return AppThemes.cyan;
-    case AppThemeType.purple:
-      return AppThemes.purple;
-    default:
-      return AppThemes.blue;
+    case AppThemeType.yellow:
+      return AppThemes.yellow;
   }
 }

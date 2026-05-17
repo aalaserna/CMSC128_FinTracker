@@ -81,7 +81,14 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
-
+    - assets/fonts/
+  fonts:
+    - family: Rafgins
+      fonts:
+        - asset: assets/fonts/Rafgins.otf
+    - family: Outfit
+      fonts:
+        - asset: assets/fonts/Outfit.ttf
 # App icon generation (run: `dart run flutter_launcher_icons`)
 flutter_launcher_icons:
   android: true

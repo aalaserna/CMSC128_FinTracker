@@ -5,17 +5,12 @@ import 'expense_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../analytics/financial_insight_service.dart';
 import '../analytics/widgets/analytics_bottom_sheet.dart';
+import 'builders/designs/colors.dart';
 
 enum SummaryMode { weekly, monthly }
 enum ChartMode { pie, bar }
 
-const Color summaryPageBg = Color.fromARGB(255, 255, 255, 255);
-const Color summaryCardBg = Color.fromARGB(255, 238, 245, 255);
-const Color summaryInnerCardBg = Color(0xFFC9D3E0);
-const Color summaryInputBg = Color(0xFFF7F9FC);
-const Color summaryNavy = Color(0xFF1C2445);
-const Color summaryMutedText = Color(0xFF6B7280);
-const Color summaryBorder = Color(0xFFE3E8F0);
+// Theme-aware colors are provided by builders/designs/colors.dart
 
 class SummaryPage extends StatefulWidget {
   const SummaryPage({super.key});
@@ -42,7 +37,7 @@ class _SummaryPageState extends State<SummaryPage> {
   ChartMode _chartMode = ChartMode.pie;
 
   double _periodBudget = 0.0;
-  String _budgetCycle = 'Weekly';
+  
 
   /// Runs detectBudgetRisk (health score + overspend alerts) and shows the
   /// shared AnalyticsBottomSheet — same pattern as ProfilePage.
@@ -81,9 +76,8 @@ class _SummaryPageState extends State<SummaryPage> {
 
     if (!mounted) return;
 
-    setState(() {
+      setState(() {
       _periodBudget = convertedBudget;
-      _budgetCycle = savedCycle;
     });
   }
 
@@ -364,7 +358,7 @@ class _SummaryPageState extends State<SummaryPage> {
         value: amount,
         title: percentage < 5 ? '' : '${percentage.toStringAsFixed(0)}%',
         radius: 86,
-        titleStyle: const TextStyle(
+        titleStyle: TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w800,
           color: Colors.white,
@@ -387,7 +381,7 @@ class _SummaryPageState extends State<SummaryPage> {
     return Container(
       padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-        color: summaryInnerCardBg,
+        color: colorCardBg,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -425,7 +419,7 @@ class _SummaryPageState extends State<SummaryPage> {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? summaryNavy : Colors.transparent,
+            color: selected ? colorNavy : Colors.transparent,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Text(
@@ -434,7 +428,7 @@ class _SummaryPageState extends State<SummaryPage> {
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: selected ? Colors.white : summaryNavy,
+              color: selected ? Colors.white : colorNavy,
             ),
           ),
         ),
@@ -449,7 +443,7 @@ class _SummaryPageState extends State<SummaryPage> {
         width: 150,
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: summaryInnerCardBg,
+          color: colorCardBg,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
@@ -485,7 +479,7 @@ class _SummaryPageState extends State<SummaryPage> {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? summaryNavy : Colors.transparent,
+            color: selected ? colorNavy : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
@@ -493,7 +487,7 @@ class _SummaryPageState extends State<SummaryPage> {
             size: 20,
             color: selected
                 ? Colors.white
-                : summaryNavy.withValues(alpha: 0.55),
+                : colorNavy.withOpacity(0.55),
           ),
         ),
       ),
@@ -524,24 +518,24 @@ class _SummaryPageState extends State<SummaryPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     'Total:',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: summaryMutedText,
+                      color: colorBodyText,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  SizedBox(height: 2),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
                       '₱${total.toStringAsFixed(2)}',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
-                        color: summaryNavy,
+                        color: colorNavy,
                       ),
                     ),
                   ),
@@ -586,7 +580,7 @@ class _SummaryPageState extends State<SummaryPage> {
           BarChartRodData(
             toY: dailyTotals[index],
             width: _summaryMode == SummaryMode.weekly ? 18 : 5,
-            color: summaryNavy,
+            color: colorNavy,
             borderRadius: BorderRadius.circular(8),
           ),
         ],
@@ -607,7 +601,7 @@ class _SummaryPageState extends State<SummaryPage> {
                   if (_periodBudget > 0)
                     HorizontalLine(
                       y: _periodBudget,
-                      color: summaryNavy.withValues(alpha: 0.35),
+                      color: colorNavy.withOpacity(0.35),
                       strokeWidth: 1,
                       dashArray: [6, 4],
                     ),
@@ -618,7 +612,7 @@ class _SummaryPageState extends State<SummaryPage> {
                 drawVerticalLine: false,
                 horizontalInterval: chartMaxY / 4,
                 getDrawingHorizontalLine: (value) =>
-                    FlLine(color: summaryBorder, strokeWidth: 1),
+                    FlLine(color: colorDivider, strokeWidth: 1),
               ),
               borderData: FlBorderData(show: false),
               titlesData: FlTitlesData(
@@ -638,9 +632,9 @@ class _SummaryPageState extends State<SummaryPage> {
                         value >= 1000
                             ? '${(value / 1000).toStringAsFixed(1)}k'
                             : value.toStringAsFixed(0),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 9,
-                          color: summaryMutedText,
+                          color: colorBodyText,
                         ),
                       );
                     },
@@ -662,10 +656,10 @@ class _SummaryPageState extends State<SummaryPage> {
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
                             labels[index],
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              color: summaryMutedText,
+                              color: colorBodyText,
                             ),
                           ),
                         );
@@ -681,10 +675,10 @@ class _SummaryPageState extends State<SummaryPage> {
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
                           '$day',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
-                            color: summaryMutedText,
+                            color: colorBodyText,
                           ),
                         ),
                       );
@@ -770,21 +764,21 @@ class _SummaryPageState extends State<SummaryPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: summaryInnerCardBg.withValues(alpha: 0.65),
+        color: colorCardBg.withOpacity(0.65),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Expense legend',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w800,
-              color: summaryNavy,
+              color: colorNavy,
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           ...categoryData.map((data) {
             final name = data['name'] as String;
             final amount = data['amount'] as double;
@@ -807,7 +801,7 @@ class _SummaryPageState extends State<SummaryPage> {
                   Expanded(
                     child: Text(
                       _capitalize(name),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
@@ -824,7 +818,7 @@ class _SummaryPageState extends State<SummaryPage> {
                   const SizedBox(width: 12),
                   Text(
                     '₱${amount.toStringAsFixed(2)}',
-                    style: const TextStyle(
+                      style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                     ),
@@ -849,11 +843,11 @@ class _SummaryPageState extends State<SummaryPage> {
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
           color: _isAnalyzing
-              ? summaryNavy.withValues(alpha: 0.08)
-              : summaryNavy.withValues(alpha: 0.05),
+              ? colorNavy.withOpacity(0.08)
+              : colorNavy.withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: summaryNavy.withValues(alpha: 0.15),
+            color: colorNavy.withOpacity(0.15),
             width: 1,
           ),
         ),
@@ -866,7 +860,7 @@ class _SummaryPageState extends State<SummaryPage> {
                     height: 15,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: summaryNavy.withValues(alpha: 0.7),
+                      color: colorNavy.withOpacity(0.7),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -875,7 +869,7 @@ class _SummaryPageState extends State<SummaryPage> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: summaryNavy.withValues(alpha: 0.7),
+                      color: colorNavy.withOpacity(0.7),
                     ),
                   ),
                 ],
@@ -883,13 +877,13 @@ class _SummaryPageState extends State<SummaryPage> {
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.insights_rounded,
-                    size: 17,
-                    color: _expenses.isEmpty
-                        ? summaryNavy.withValues(alpha: 0.3)
-                        : summaryNavy.withValues(alpha: 0.75),
-                  ),
+                    Icon(
+                      Icons.insights_rounded,
+                      size: 17,
+                      color: _expenses.isEmpty
+                      ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
+                      : Theme.of(context).colorScheme.primary.withOpacity(0.75),
+                    ),
                   const SizedBox(width: 8),
                   Text(
                     'Analyze My Spending',
@@ -897,8 +891,8 @@ class _SummaryPageState extends State<SummaryPage> {
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: _expenses.isEmpty
-                          ? summaryNavy.withValues(alpha: 0.3)
-                          : summaryNavy.withValues(alpha: 0.85),
+                          ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
+                          : Theme.of(context).colorScheme.primary.withOpacity(0.85),
                     ),
                   ),
                 ],
@@ -923,20 +917,20 @@ class _SummaryPageState extends State<SummaryPage> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        color: summaryInputBg,
+        color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: summaryBorder),
+        border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.18)),
       ),
       child: DropdownButton<DateTime>(
         isExpanded: true,
         value: safeValue,
         underline: const SizedBox(),
-        icon: const Icon(Icons.keyboard_arrow_down, color: summaryNavy),
-        style: const TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          color: Colors.black87,
-        ),
+        icon: Icon(Icons.keyboard_arrow_down, color: colorNavy),
+                    style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: colorNavy,
+            ),
         items: periods.map((periodStart) {
           String label;
           if (_summaryMode == SummaryMode.weekly) {
@@ -978,7 +972,7 @@ class _SummaryPageState extends State<SummaryPage> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: summaryCardBg,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -987,6 +981,7 @@ class _SummaryPageState extends State<SummaryPage> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
+              color: color.withOpacity(0.18),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(icon, color: color, size: 24),
@@ -998,18 +993,18 @@ class _SummaryPageState extends State<SummaryPage> {
               children: [
                 Text(
                   displayTitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w600,
-                    color: summaryNavy,
+                    color: colorNavy,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   '$transactions transaction${transactions == 1 ? '' : 's'}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: summaryMutedText,
+                    color: colorBodyText,
                   ),
                 ),
               ],
@@ -1017,10 +1012,10 @@ class _SummaryPageState extends State<SummaryPage> {
           ),
           Text(
             '₱${amount.toStringAsFixed(2)}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: summaryNavy,
+              color: colorNavy,
             ),
           ),
         ],
@@ -1057,9 +1052,9 @@ class _SummaryPageState extends State<SummaryPage> {
     final isDataEmpty = chartData.isEmpty;
 
     return Scaffold(
-      backgroundColor: summaryPageBg,
+      backgroundColor: colorPageBg,
       appBar: AppBar(
-        backgroundColor: summaryPageBg,
+        backgroundColor: colorPageBg,
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
@@ -1067,8 +1062,8 @@ class _SummaryPageState extends State<SummaryPage> {
           _summaryMode == SummaryMode.weekly
               ? 'Weekly Expense'
               : 'Monthly Expense',
-          style: const TextStyle(
-            color: summaryNavy,
+                  style: TextStyle(
+            color: colorNavy,
             fontWeight: FontWeight.w800,
             fontSize: 24,
           ),
@@ -1080,36 +1075,36 @@ class _SummaryPageState extends State<SummaryPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSummaryModeToggle(),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
 
             // ── Main chart card ──────────────────────────────────────────────
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
               decoration: BoxDecoration(
-                color: summaryCardBg,
+                color: Colors.transparent, // chart background removed to follow request
                 borderRadius: BorderRadius.circular(28),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _buildChartModeToggle(),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10),
 
                   if (_chartMode == ChartMode.pie)
                     _buildPieChart(pieChartSections, totalExpenses)
                   else
                     _buildBarChart(start, end),
 
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   _buildComparisonChip(totalExpenses, previousTotal),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
                   _buildLegend(categoryData, totalExpenses),
                   const SizedBox(height: 18),
                   _buildPeriodDropdown(),
                   const SizedBox(height: 12),
                   Divider(
-                    color: summaryNavy.withValues(alpha: 0.10),
+                    color: colorNavy.withOpacity(0.10),
                     thickness: 1,
                     height: 1,
                   ),
@@ -1119,11 +1114,11 @@ class _SummaryPageState extends State<SummaryPage> {
               ),
             ),
 
-            const SizedBox(height: 22),
+            SizedBox(height: 22),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Breakdown',
                   style: TextStyle(
                     fontSize: 19,

@@ -18,8 +18,8 @@ Widget buildDropdownSelector({
         child: DropdownButton<String>(
           value: value,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down, color: colorBodyText),
-          style: const TextStyle(
+          icon: Icon(Icons.keyboard_arrow_down, color: colorBodyText),
+          style: TextStyle(
             color: colorBodyText,
             fontSize: 15,
             fontWeight: FontWeight.w500,
@@ -42,14 +42,14 @@ Widget buildBudgetInputField({
   return TextField(
     controller: controller,
     keyboardType: TextInputType.number,
-    style: const TextStyle(fontSize: 15, color: colorBodyText),
+    style: TextStyle(fontSize: 15, color: colorBodyText),
     decoration: InputDecoration(
       filled: true,
       fillColor: colorFieldBg,
       hintText: savedBudget != null
           ? formatCurrency(savedBudget)
           : 'Enter your budget here...',
-      hintStyle: const TextStyle(color: colorHintText, fontSize: 14),
+      hintStyle: TextStyle(color: colorHintText, fontSize: 14),
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
       border: OutlineInputBorder(
@@ -62,7 +62,7 @@ Widget buildBudgetInputField({
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: colorNavy, width: 1.5),
+        borderSide: BorderSide(color: colorNavy, width: 1.5),
       ),
     ),
   );
@@ -75,7 +75,7 @@ Widget buildNotificationToggle({
   return Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
-      const Text(
+      Text(
         'Enable Expense Reminders',
         style: TextStyle(
           fontSize: 14,
@@ -126,15 +126,14 @@ Widget buildReminderRow({
               children: [
                 Text(
                   selectedTime.format(context),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: colorBodyText,
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Icon(Icons.access_time_rounded,
-                    size: 16, color: colorBodyText),
+                Icon(Icons.access_time_rounded, size: 16, color: colorBodyText),
               ],
             ),
           ),

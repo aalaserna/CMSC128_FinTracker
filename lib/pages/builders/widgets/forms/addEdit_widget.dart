@@ -7,7 +7,7 @@ Widget buildLabel(String text) {
     padding: const EdgeInsets.only(bottom: 8),
     child: Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
         color: colorBodyText,
@@ -30,12 +30,12 @@ Widget buildTextInput({
     inputFormatters: inputFormatters,
     onChanged: onChanged,
     validator: validator,
-    style: const TextStyle(fontSize: 15, color: colorBodyText),
+    style: TextStyle(fontSize: 15, color: colorBodyText),
     decoration: InputDecoration(
       filled: true,
       fillColor: colorFieldBg,
       hintText: hint,
-      hintStyle: const TextStyle(color: colorHintText, fontSize: 14),
+      hintStyle: TextStyle(color: colorHintText, fontSize: 14),
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
       border: OutlineInputBorder(
@@ -46,9 +46,9 @@ Widget buildTextInput({
         borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide.none,
       ),
-      focusedBorder: OutlineInputBorder(
+        focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: colorNavy, width: 1.5),
+        borderSide: BorderSide(color: colorNavy, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
@@ -77,8 +77,8 @@ Widget formDropdownSelector({
       child: DropdownButton<String>(
         value: value,
         isExpanded: true,
-        icon: const Icon(Icons.keyboard_arrow_down, color: colorBodyText),
-        style: const TextStyle(
+        icon: Icon(Icons.keyboard_arrow_down, color: colorBodyText),
+        style: TextStyle(
           color: colorBodyText,
           fontSize: 15,
           fontWeight: FontWeight.w500,
@@ -120,8 +120,8 @@ Widget buildExpenseCategoryDropdown({
       child: DropdownButton<String>(
         value: safeValue,
         isExpanded: true,
-        icon: const Icon(Icons.keyboard_arrow_down, color: colorBodyText),
-        style: const TextStyle(
+        icon: Icon(Icons.keyboard_arrow_down, color: colorBodyText),
+        style: TextStyle(
           color: colorBodyText,
           fontSize: 15,
           fontWeight: FontWeight.w500,
@@ -170,13 +170,13 @@ Widget buildDatePicker({
         children: [
           Text(
             formattedDate(selectedDate),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
               color: colorBodyText,
             ),
           ),
-          const Icon(Icons.calendar_month_rounded, size: 18, color: colorBodyText),
+          Icon(Icons.calendar_month_rounded, size: 18, color: colorBodyText),
         ],
       ),
     ),

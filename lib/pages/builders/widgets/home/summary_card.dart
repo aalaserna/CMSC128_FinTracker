@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../designs/colors.dart';
 
 class SummaryCard extends StatelessWidget {
   final String title;
@@ -15,17 +16,17 @@ class SummaryCard extends StatelessWidget {
     return Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFFDCE8F5),
+          color: colorCardBg,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           children: [
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
-                color: Colors.black87,
+                color: colorNavy,
               ),
             ),
             const SizedBox(height: 5),
@@ -34,7 +35,7 @@ class SummaryCard extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
-                color: title == 'Left to Spend'? Colors.black : Colors.grey[700],
+                color: title == 'Left to Spend' ? colorNavy : colorBodyText,
               ),
             ),
           ],

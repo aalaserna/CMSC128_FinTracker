@@ -2,14 +2,8 @@ import 'package:fins/pages/builders/widgets/profile_and_settings/theme_selector_
 import 'package:fins/themes/constants/app_theme_type.dart';
 import 'package:fins/themes/logic/theme_controller.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
-import 'package:shared_preferences/shared_preferences.dart';
-import '../main.dart';
 import 'package:fins/themes/logic/app_themes.dart';
 import 'builders/designs/bubble_background.dart';
-import 'package:flutter/foundation.dart';
 import 'package:fins/pages/builders/widgets/profile_and_settings/settings_card.dart';
 
 // please integrate your shared preferences data here

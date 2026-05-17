@@ -126,7 +126,7 @@ class _EditExpensePageState extends State<EditExpensePage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Expanded(
+                            Expanded(
                               child: Text(
                                 'Edit expense',
                                 style: TextStyle(
@@ -139,7 +139,7 @@ class _EditExpensePageState extends State<EditExpensePage> {
                             ),
                             IconButton(
                               onPressed: () => Navigator.pop(context),
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.close_rounded,
                                 color: colorNavy,
                               ),
@@ -147,7 +147,7 @@ class _EditExpensePageState extends State<EditExpensePage> {
                           ],
                         ),
 
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
 
                         // Inner card
                         Container(

@@ -6,6 +6,7 @@ import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.da
 import 'package:flutter/foundation.dart';
 
 import 'pages/homepage.dart';
+import 'pages/monthly_view.dart';
 import 'pages/summary.dart';
 import 'pages/customizations.dart';
 import 'pages/expenses/add/add_expense_page.dart'; 
@@ -13,7 +14,6 @@ import 'pages/finance_insights.dart';
 import 'pages/expense_model.dart';
 import 'pages/landing.dart';
 import 'utils/notification_helper.dart';
-import 'pages/settings_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:timezone/data/latest.dart' as tz_data;
@@ -108,17 +108,17 @@ class _MyAppState extends State<MyApp> {
 }
 
 Future<bool> _shouldShowLanding() async {
-  final prefs = await SharedPreferences.getInstance();
-  final onboardingComplete = prefs.getBool('hasCompletedOnboarding');
-  if (onboardingComplete != null) {
-    return !onboardingComplete;
-  }
+  // final prefs = await SharedPreferences.getInstance();
+  // final onboardingComplete = prefs.getBool('hasCompletedOnboarding');
+  // if (onboardingComplete != null) {
+  //   return !onboardingComplete;
+  // }
 
-  // Backward compatibility with older app versions that only used `isFirstTime`.
-  final isFirstTime = prefs.getBool('isFirstTime');
-  if (isFirstTime != null) {
-    return isFirstTime;
-  }
+  // // Backward compatibility with older app versions that only used `isFirstTime`.
+  // final isFirstTime = prefs.getBool('isFirstTime');
+  // if (isFirstTime != null) {
+  //   return isFirstTime;
+  // }
 
   // Default to showing landing if no onboarding state has ever been stored.
   return true;
@@ -143,9 +143,15 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   // Track selected tab. 0 is 'Home'.
   int _bottomNavIndex = 0;
 
+  // Whether the monthly view overlay is visible.
+  bool _showMonthlyOverlay = false;
+
+  void _openMonthlyOverlay() => setState(() => _showMonthlyOverlay = true);
+  void _closeMonthlyOverlay() => setState(() => _showMonthlyOverlay = false);
+
   final iconList = <IconData>[
     Icons.home,
-    Icons.settings,     // budget & customizations (Changed to settings)
+    Icons.settings,     // budget & customizations (Now Settings tab)
     Icons.bar_chart,    // Summary
     Icons.lightbulb,    // financial insight
   ];
@@ -168,13 +174,18 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   Widget build(BuildContext context) {
     // List of all the screens. HomePage must be instantiated with its static key
     // so its state (like the selected date) can be accessed from the FAB.
+    // Restore original 4-tab layout. Monthly view will be shown as an
+    // in-scaffold overlay so the bottom navigation remains visible.
+
     final pages = <Widget>[
-      HomePage(key: HomePage.homePageStateKey,
+      HomePage(
+        key: HomePage.homePageStateKey,
         onSummaryTap: () {
           setState(() {
-            _bottomNavIndex = 2; // Updated to match new Summary index
+            _bottomNavIndex = 2; // Summary index
           });
         },
+        onOpenMonthlyView: _openMonthlyOverlay,
       ),
       const CustomizationPage(),  // budget & expense settings (Now Settings tab)
       const SummaryPage(),
@@ -182,41 +193,63 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     ];
 
     return Scaffold(
+      extendBody: true,
+      backgroundColor: Colors.transparent,
       resizeToAvoidBottomInset: false,
       // JAS: i removed the scaffold bg here since the color scheme from app themes is now applied here automatically
-      body: pages[_bottomNavIndex],
+      body: Stack(
+        children: [
+          pages[_bottomNavIndex],
+          if (_showMonthlyOverlay)
+            Positioned.fill(
+              // child: MonthlyViewPage(onClose: _closeMonthlyOverlay),
+              child: MonthlyViewPage(
+                key: MonthlyViewPage.monthlyViewStateKey,
+                onClose: _closeMonthlyOverlay
+            ),
+            ),
+        ],
+      ),
+      
       // Code for the add button
       floatingActionButton: FloatingActionButton(
         shape: const CircleBorder(),
         backgroundColor: context.primary,
         onPressed: () async {
-          // Check if we are in Home Page (index 0)
-          if (_bottomNavIndex == 0) {
-            // Get the currently selected date from the HomePage State via the GlobalKey
-            final selectedDate = HomePage.homePageStateKey.currentState?.getSelectedDate() ?? DateTime.now();
-            
-            final newExpense = await showDialog<Expense>(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) => AddExpensePage(initialDate: selectedDate),
-            );
-
-            if (newExpense != null && newExpense is Expense) {
-              // Add database
-              await DBHelper().insertExpense(newExpense);
-              setState(() {
-                // Add the new expense to the shared static list
-                HomePage.expenses.add(newExpense); 
-                // Switch back to the Home tab to see the change
-                _bottomNavIndex = 0; 
-              });
-            }
+          DateTime selectedDate;
+  
+          if (_showMonthlyOverlay) {
+            selectedDate = MonthlyViewPage.monthlyViewStateKey.currentState?.getSelectedDate() ?? DateTime.now();
           } else {
-            setState(() => _bottomNavIndex = 0);
+            selectedDate = HomePage.homePageStateKey.currentState?.getSelectedDate() ?? DateTime.now();
+          }
+          final newExpense = await showDialog<Expense>(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => AddExpensePage(initialDate: selectedDate),
+          );
+
+          if (newExpense != null) {
+            await DBHelper().insertExpense(newExpense);
+            
+            setState(() {
+              HomePage.expenses.add(newExpense); 
+              if (_showMonthlyOverlay) {
+                MonthlyViewPage.monthlyViewStateKey.currentState?.loadAllExpenses();
+              } else if (_bottomNavIndex != 0) {
+                _bottomNavIndex = 0; 
+              }
+            });
+            HomePage.homePageStateKey.currentState?.loadExpenses();
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Expense "${newExpense.name}" added successfully.')),
+            );
           }
         },
         child: Icon(Icons.add, color: context.surface),
       ),
+
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       
       bottomNavigationBar: LayoutBuilder(
@@ -228,11 +261,21 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
             notchSmoothness: NotchSmoothness.softEdge,
             leftCornerRadius: 32,
             rightCornerRadius: 32,
+            backgroundColor: (() {
+              final t = ThemeController.notifier.value;
+              if (t == AppThemeType.blue) return AppColors.blue.container;
+              if (t == AppThemeType.pink) return AppColors.pink.container;
+              if (t == AppThemeType.yellow) return AppColors.yellow.container;
+              return AppColors.blue.container;
+            })(),
             activeColor: context.onPrimary,
-            inactiveColor: context.onPrimary.withOpacity(0.3),
+            inactiveColor: context.onPrimary.withValues(alpha: 0.3),
             // Update the state (selected index) when tapping a tab
             onTap: (index) {
-              setState(() => _bottomNavIndex = index);
+              setState(() {
+                _bottomNavIndex = index;
+                _showMonthlyOverlay = false; // hide overlay when switching tabs
+              });
             },
           );
         },

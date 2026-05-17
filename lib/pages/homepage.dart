@@ -6,15 +6,16 @@ import 'monthly_view.dart';
 import 'expenses/edit/edit_expense_page.dart';
 import '../utils/date_utils.dart';
 import 'builders/widgets/home/day_page.dart';
-import 'customizations.dart';
 import 'package:fins/pages/builders/widgets/profile_and_settings/theme_selector_popup.dart';
 import 'package:fins/themes/logic/theme_controller.dart';
 import 'package:fins/themes/logic/app_themes.dart';
+import 'builders/designs/colors.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback? onSummaryTap;
+  final VoidCallback? onOpenMonthlyView;
 
-  const HomePage({super.key, this.onSummaryTap});
+  const HomePage({super.key, this.onSummaryTap, this.onOpenMonthlyView});
 
   static double userBudget = 0.0;
   static final List<Expense> expenses = [];
@@ -26,8 +27,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
-  final Color kSelectedBlue = const Color(0xFF5E6C85);
+  with SingleTickerProviderStateMixin {
 
   late List<DateTime> weekDates;
   late String currentMonthName;
@@ -212,27 +212,32 @@ class _HomePageState extends State<HomePage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorPageBg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorPageBg,
         elevation: 0,
         title: Text(
           currentMonthName,
-          style: const TextStyle(
-              color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              color: colorNavy, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.calendar_month, color: Colors.black),
-            // Refreshes the entire home page after returning from mothly view page
-            // Updates the added expense from the monthly view page to the home page
-            onPressed: () async { 
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const MonthlyViewPage()),
-              );
-              loadExpenses();
+            icon: Icon(Icons.calendar_month, color: colorNavy),
+            // If parent provided a handler to open the monthly view in-place,
+            // use it so the bottom navbar remains visible. Otherwise fall back
+            // to the previous behavior of pushing a new route.
+            onPressed: () async {
+              if (widget.onOpenMonthlyView != null) {
+                widget.onOpenMonthlyView!();
+              } else {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MonthlyViewPage()),
+                );
+                loadExpenses();
+              }
             },
           ),
           IconButton(
@@ -284,10 +289,10 @@ class _HomePageState extends State<HomePage>
                           onTap: () => _tabController.animateTo(index),
                           child: Container(
                             margin: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? kSelectedBlue
-                                  : const Color(0xFFE0E0E0).withOpacity(0.5),
+                              decoration: BoxDecoration(
+                                    color: isSelected
+                                      ? context.primary
+                                      : colorCardBg.withOpacity(0.5),
                               borderRadius: BorderRadius.circular(25),
                             ),
                             child: Column(

@@ -65,7 +65,7 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
         children: [
           Positioned.fill(
             child: Image.asset(
-              "assets/images/background.png",
+              "assets/images/background.jpg",
               fit: BoxFit.cover,
             ),
           ),
@@ -77,45 +77,87 @@ class _LandingPageState extends State<LandingPage> with SingleTickerProviderStat
           SafeArea(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 20.0 : 40.0),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      FadeTransition(
-                        opacity: _titleFade!,
-                        child: ScaleTransition(
-                          scale: _titleScale!,
-                          child: Text(
-                            "Welcome to Fins",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: isSmallScreen ? 36 : 48,
-                              fontWeight: FontWeight.bold,
-                              shadows: const [
-                                Shadow(
-                                  offset: Offset(1, 1),
-                                  blurRadius: 4,
-                                  color: Colors.black26,
+              child: Stack(
+                children: [
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Transform.translate(
+                            offset: Offset(0, isSmallScreen ? -120 : -140),
+                            child: FadeTransition(
+                              opacity: _titleFade!,
+                              child: ScaleTransition(
+                                scale: _titleScale!,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Welcome to',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: isSmallScreen ? 28 : 38,
+                                        fontFamily: 'Rafgins',
+                                        shadows: const [
+                                          Shadow(
+                                            offset: Offset(1, 1),
+                                            blurRadius: 4,
+                                            color: Colors.black26,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(height: isSmallScreen ? 4 : 8),
+                                    Text(
+                                      'FINS',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: isSmallScreen ? 80 : 90,
+                                        fontFamily: 'Rafgins',
+                                        fontWeight: FontWeight.w500,
+                                        letterSpacing: 1.5,
+                                        shadows: const [
+                                          Shadow(
+                                            offset: Offset(1, 1),
+                                            blurRadius: 4,
+                                            color: Colors.black26,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
+                          Image.asset(
+                            'assets/images/fin.png',
+                            height: isSmallScreen ? 220 : 250,
+                            fit: BoxFit.contain,
+                          ),
+                        ],
                       ),
-                      SizedBox(height: isSmallScreen ? 60 : 100),
-                      FadeTransition(
-                        opacity: _buttonFade!,
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: isSmallScreen ? 120 : 130,
+                    child: FadeTransition(
+                      opacity: _buttonFade!,
+                      child: Center(
                         child: _HoverAnimatedButton(
                           onPressed: () => _startApp(context),
                           isSmallScreen: isSmallScreen,
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
@@ -193,7 +235,8 @@ class _HoverAnimatedButtonState extends State<_HoverAnimatedButton> with SingleT
               "Get Started",
               style: TextStyle(
                 fontSize: widget.isSmallScreen ? 16 : 18,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w400,
+                fontFamily: 'Outfit',
                 color: Colors.white,
               ),
             ),

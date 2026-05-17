@@ -124,33 +124,33 @@ class _AddExpensePageState extends State<AddExpensePage> {
                 padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Page title
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Add a new expense',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                              color: colorNavy,
-                              letterSpacing: -0.5,
+                        children: [
+                        // Page title
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Add a new expense',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: colorNavy,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
                             ),
-                          ),
+                            IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: Icon(
+                                Icons.close_rounded,
+                                color: colorNavy,
+                              ),
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(
-                            Icons.close_rounded,
-                            color: colorNavy,
-                          ),
-                        ),
-                      ],
-                    ),
 
-                    const SizedBox(height: 16),
+                        SizedBox(height: 16),
 
                     // card
                     Container(

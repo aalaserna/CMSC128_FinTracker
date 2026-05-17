@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'builders/designs/colors.dart';
 import '../database/db_helper.dart';
 import '../analytics/financial_insight_service.dart';
 import 'expense_model.dart';
-import '../analytics/models/financial_insight.dart';
 import '../analytics/models/analytics_result.dart';
 import '../analytics/widgets/analytics_bottom_sheet.dart';
 import '../analytics/widgets/analytics_action_button.dart';
@@ -80,16 +80,13 @@ class _ProfilePageState extends State<ProfilePage> {
     };
   }
 
-  String _monthName(int m) => const [
-        '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-      ][m];
+ 
 
   @override
   Widget build(BuildContext context) {
     if (_initialLoading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFF2F4EE),
+      return Scaffold(
+        backgroundColor: colorPageBg,
         body: Center(child: CircularProgressIndicator()),
       );
     }
@@ -98,23 +95,23 @@ class _ProfilePageState extends State<ProfilePage> {
     final double score = stats['score'] as double;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F4EE),
+      backgroundColor: colorPageBg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF2F4EE),
+        backgroundColor: colorPageBg,
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
-        title: const Text(
+        title: Text(
           'Financial Assistant',
           style: TextStyle(
-            color: Color(0xFF1C2340),
+            color: colorNavy,
             fontWeight: FontWeight.w800,
             fontSize: 22,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF6C80A4)),
+            icon: Icon(Icons.refresh_rounded, color: colorNavy.withOpacity(0.7)),
             tooltip: 'Refresh data',
             onPressed: _loadExpenses,
           ),
@@ -123,7 +120,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
       body: RefreshIndicator(
         onRefresh: _loadExpenses,
-        color: const Color(0xFF1C2340),
+        color: colorNavy,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
@@ -135,14 +132,14 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 20),
 
               // section label
-              const Padding(
-                padding: EdgeInsets.only(left: 4, bottom: 10),
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 10),
                 child: Text(
                   'Choose an Analysis',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF6C80A4),
+                    color: colorBodyText.withOpacity(0.8),
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -153,7 +150,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 icon: Icons.bar_chart_rounded,
                 subtitle: 'Month-over-month comparison & top expenses',
                 isLoading: _loadingStates['spending']!,
-                accentColor: const Color(0xFF1E2A3A),
+                accentColor: Theme.of(context).colorScheme.primary,
                 onTap: () => _runAnalysis('spending', _service.analyzeMonthlySpending),
               ),
               AnalyticsActionButton(
@@ -161,7 +158,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 icon: Icons.calendar_month_rounded,
                 subtitle: 'Category breakdown for this month',
                 isLoading: _loadingStates['monthly']!,
-                accentColor: const Color(0xFF3D5A80),
+                accentColor: Theme.of(context).colorScheme.primary,
                 onTap: () => _runAnalysis('monthly', _service.getMonthlyInsights),
               ),
               AnalyticsActionButton(
@@ -169,7 +166,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 icon: Icons.lightbulb_outline_rounded,
                 subtitle: 'Smart tips based on your habits',
                 isLoading: _loadingStates['savings']!,
-                accentColor: const Color(0xFF2E7D32),
+                accentColor: Theme.of(context).colorScheme.primary,
                 onTap: () => _runAnalysis('savings', _service.generateSavingsSuggestions),
               ),
               AnalyticsActionButton(
@@ -177,7 +174,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 icon: Icons.favorite_outline_rounded,
                 subtitle: 'Overspend alerts & health score',
                 isLoading: _loadingStates['health']!,
-                accentColor: const Color(0xFF1B5E20),
+                accentColor: Theme.of(context).colorScheme.primary,
                 onTap: () => _runAnalysis('health', _service.detectBudgetRisk),
               ),
               AnalyticsActionButton(
@@ -185,7 +182,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 icon: Icons.trending_up_rounded,
                 subtitle: 'Weekly patterns & peak spending days',
                 isLoading: _loadingStates['trends']!,
-                accentColor: const Color(0xFF4A148C),
+                accentColor: Theme.of(context).colorScheme.primary,
                 onTap: () => _runAnalysis('trends', _service.analyzeSpendingTrends),
               ),
               const SizedBox(height: 20), 
@@ -231,7 +228,7 @@ class _HeaderCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF2E3A59),
+        color: colorNavy,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(

@@ -1,4 +1,3 @@
-import 'package:fins/themes/constants/app_colors.dart';
 import 'package:fins/themes/logic/app_themes.dart';
 import 'package:flutter/material.dart';
 
@@ -27,11 +26,7 @@ class _ThemeSelectorPopupState extends State<ThemeSelectorPopup> {
     _tempSelectedTheme = widget.initialTheme;
   }
 
-  void _handleThemeSelection(AppThemeType choice) {
-    setState(() {
-      _tempSelectedTheme = choice;
-    });
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -51,17 +46,21 @@ class _ThemeSelectorPopupState extends State<ThemeSelectorPopup> {
             children: [
               SizedBox(
                 width: double.infinity,
-                child: GridView.count(
+                  child: GridView.count(
                   shrinkWrap: true,
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 20,
-                  crossAxisSpacing: 20,
+                  crossAxisCount: AppThemeType.values.length,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
                   physics: const NeverScrollableScrollPhysics(),
+                  childAspectRatio: 1,
                   children: AppThemeType.values.map((type) {
-                    return _buildThemeChoice(
-                      type: type,
-                      isSelected: _tempSelectedTheme == type,
-                      onTap: () => setState(() => _tempSelectedTheme = type),
+                    return Align(
+                      alignment: Alignment.center,
+                      child: _buildThemeChoice(
+                        type: type,
+                        isSelected: _tempSelectedTheme == type,
+                        onTap: () => setState(() => _tempSelectedTheme = type),
+                      ),
                     );
                   }).toList(),
                 ),
