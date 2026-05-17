@@ -188,7 +188,7 @@ class _LandingPageState extends State<LandingPage>
                         ),
                       ),
 
-                      SizedBox(height: 50),
+                      SizedBox(height: 10),
 
                       // Belt 1
                       AnimatedBuilder(
@@ -243,7 +243,7 @@ class _LandingPageState extends State<LandingPage>
                         },
                       ),
 
-                      SizedBox(height: 50),
+                      SizedBox(height: 30),
 
                       // Belt 2
                       AnimatedBuilder(
@@ -307,7 +307,7 @@ class _LandingPageState extends State<LandingPage>
                         },
                       ),
 
-                      SizedBox(height: 50),
+                      SizedBox(height: 30),
                       
                       // Belt 3
                       AnimatedBuilder(
