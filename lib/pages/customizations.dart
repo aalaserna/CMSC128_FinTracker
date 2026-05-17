@@ -4,11 +4,12 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'builders/designs/bubble_background.dart';
+import 'package:fins/pages/builders/widgets/profile_and_settings/theme_selector_popup.dart';
 import 'package:fins/themes/logic/app_themes.dart';
+import 'package:fins/themes/logic/theme_controller.dart';
 
 import '../main.dart';
 import '../utils/notification_helper.dart';
-import 'settings_page.dart'; 
 
 
 bool get _supportsNotifications =>
@@ -196,16 +197,15 @@ class _CustomizationPageState extends State<CustomizationPage> {
                         child: IconButton(
                           icon: const Icon(Icons.palette_outlined, color: Colors.black),
                           onPressed: () async {
-                            await Navigator.push( 
-                              context,
-                              MaterialPageRoute(
-                                // fullscreenDialog prevents the hero transition that causes
-                                // a black flash when the theme changes the scaffold color.
-                                fullscreenDialog: true,
-                                builder: (_) => const SettingsPage(),
+                            await showDialog<AppThemeType>(
+                              context: context,
+                              builder: (_) => ThemeSelectorPopup(
+                                initialTheme: ThemeController.notifier.value,
+                                onConfirm: (newTheme) {
+                                  ThemeController.setTheme(newTheme);
+                                },
                               ),
                             );
-                            //_loadBudget();
                           },
                         ),
                       )

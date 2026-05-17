@@ -7,7 +7,9 @@ import 'expenses/edit/edit_expense_page.dart';
 import '../utils/date_utils.dart';
 import 'builders/widgets/home/day_page.dart';
 import 'customizations.dart';
-import 'settings_page.dart';
+import 'package:fins/pages/builders/widgets/profile_and_settings/theme_selector_popup.dart';
+import 'package:fins/themes/logic/theme_controller.dart';
+import 'package:fins/themes/logic/app_themes.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback? onSummaryTap;
@@ -236,13 +238,13 @@ class _HomePageState extends State<HomePage>
           IconButton(
             icon: const Icon(Icons.palette_outlined, color: Colors.black),
             onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  // fullscreenDialog prevents the hero transition that causes
-                  // a black flash when the theme changes the scaffold color.
-                  fullscreenDialog: true,
-                  builder: (_) => const SettingsPage(),
+              await showDialog<AppThemeType>(
+                context: context,
+                builder: (_) => ThemeSelectorPopup(
+                  initialTheme: ThemeController.notifier.value,
+                  onConfirm: (newTheme) {
+                    ThemeController.setTheme(newTheme);
+                  },
                 ),
               );
               _loadBudget();
