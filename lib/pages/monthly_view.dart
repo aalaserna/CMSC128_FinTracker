@@ -8,6 +8,8 @@ import '../pages/expenses/add/add_expense_page.dart';
 class MonthlyViewPage extends StatefulWidget {
   final VoidCallback? onClose;
 
+  static final GlobalKey<_MonthlyViewPageState> monthlyViewStateKey = GlobalKey<_MonthlyViewPageState>();
+
   const MonthlyViewPage({super.key, this.onClose});
 
   @override
@@ -18,16 +20,17 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   List<Expense> _allExpenses = [];
+  DateTime getSelectedDate() => _selectedDay ?? DateTime.now();
 
   @override
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
-    _loadAllExpenses();
+    loadAllExpenses();
   }
 
   // Fetch data from DB
-  Future<void> _loadAllExpenses() async {
+  Future<void> loadAllExpenses() async {
     final data = await DBHelper().getAllExpenses();
     setState(() {
       _allExpenses = data;
@@ -130,7 +133,7 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.18),
+              color: iconColor.withValues(alpha: 0.18),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: iconColor, size: 20),
@@ -217,7 +220,7 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
                   shape: BoxShape.circle,
                 ),
                 todayDecoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.18),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.18),
                   shape: BoxShape.circle,
                 ),
                 todayTextStyle: TextStyle(color: colorNavy),
@@ -310,16 +313,20 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
           Expanded(
             child: selectedDayExpenses.isEmpty
               ? Center(
-                  child: Text(
-                    'You have no expenses for ${_selectedDay?.month}/${_selectedDay?.day}.\nTap the + button to log an expense.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.grey, 
-                      fontSize: 16
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 90.0),
+                    child: Text(
+                      'You have no expenses for ${_selectedDay?.month}/${_selectedDay?.day}.\nTap the + button to log an expense.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.grey, 
+                        fontSize: 16
+                      ),
                     ),
                   ),
                 )
               : ListView.separated(
+                  padding: const EdgeInsets.only(bottom: 90.0),
                   itemCount: selectedDayExpenses.length,
                   separatorBuilder: (context, index) => const Divider(height: 1),
                   itemBuilder: (context, index) {
@@ -329,40 +336,7 @@ class _MonthlyViewPageState extends State<MonthlyViewPage> {
               ),
           ),
         ],
-      ),
-
-      floatingActionButton: FloatingActionButton(
-        shape: const CircleBorder(),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        child: Icon(Icons.add, color: Colors.white),
-        onPressed: () async {
-          // Uses the selected day from the calendar as the initial date
-          final initialDate = _selectedDay ?? DateTime.now();
-
-          // Show AddExpensePage as a dialog instead of pushing a route
-          final Expense? newExpense = await showDialog<Expense>(
-            context: context,
-            barrierDismissible: false,
-            barrierColor: Colors.black.withOpacity(0.3),
-            builder: (_) => AddExpensePage(initialDate: initialDate),
-          );
-
-          if (newExpense != null) {
-            await DBHelper().insertExpense(newExpense);
-            _loadAllExpenses(); 
-          }
-
-          // Show a confirmation message after adding the expense
-          if (newExpense != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Expense "${newExpense.name}" added successfully.')),
-            );
-          }
-
-          _loadAllExpenses(); 
-        },
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      ), 
     );
   }
 }

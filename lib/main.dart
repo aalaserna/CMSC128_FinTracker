@@ -202,45 +202,57 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           pages[_bottomNavIndex],
           if (_showMonthlyOverlay)
             Positioned.fill(
-              child: MonthlyViewPage(onClose: _closeMonthlyOverlay),
+              // child: MonthlyViewPage(onClose: _closeMonthlyOverlay),
+              child: MonthlyViewPage(
+                key: MonthlyViewPage.monthlyViewStateKey,
+                onClose: _closeMonthlyOverlay
+            ),
             ),
         ],
       ),
+      
       // Code for the add button
-      floatingActionButton: _showMonthlyOverlay ? null : FloatingActionButton(
+      floatingActionButton: FloatingActionButton(
         shape: const CircleBorder(),
         backgroundColor: context.primary,
         onPressed: () async {
-          // Check if we are in Home Page (index 0)
-          if (_bottomNavIndex == 0) {
-            // Get the currently selected date from the HomePage State via the GlobalKey
-            final selectedDate = HomePage.homePageStateKey.currentState?.getSelectedDate() ?? DateTime.now();
-            
-            final newExpense = await showDialog<Expense>(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) => AddExpensePage(initialDate: selectedDate),
-            );
-
-            if (newExpense != null) {
-              // Add database
-              await DBHelper().insertExpense(newExpense);
-              setState(() {
-                // Add the new expense to the shared static list
-                HomePage.expenses.add(newExpense); 
-                // Switch back to the Home tab to see the change
-                _bottomNavIndex = 0; 
-              });
-            }
+          DateTime selectedDate;
+  
+          if (_showMonthlyOverlay) {
+            selectedDate = MonthlyViewPage.monthlyViewStateKey.currentState?.getSelectedDate() ?? DateTime.now();
           } else {
-            setState(() => _bottomNavIndex = 0);
+            selectedDate = HomePage.homePageStateKey.currentState?.getSelectedDate() ?? DateTime.now();
+          }
+          final newExpense = await showDialog<Expense>(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => AddExpensePage(initialDate: selectedDate),
+          );
+
+          if (newExpense != null) {
+            await DBHelper().insertExpense(newExpense);
+            
+            setState(() {
+              HomePage.expenses.add(newExpense); 
+              if (_showMonthlyOverlay) {
+                MonthlyViewPage.monthlyViewStateKey.currentState?.loadAllExpenses();
+              } else if (_bottomNavIndex != 0) {
+                _bottomNavIndex = 0; 
+              }
+            });
+            HomePage.homePageStateKey.currentState?.loadExpenses();
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Expense "${newExpense.name}" added successfully.')),
+            );
           }
         },
         child: Icon(Icons.add, color: context.surface),
       ),
+
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       
-      bottomNavigationBar: _showMonthlyOverlay ? null : LayoutBuilder(
+      bottomNavigationBar: LayoutBuilder(
         builder: (BuildContext innerContext, BoxConstraints constraints) {
           return AnimatedBottomNavigationBar(
             icons: iconList,
@@ -257,7 +269,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
               return AppColors.blue.container;
             })(),
             activeColor: context.onPrimary,
-            inactiveColor: context.onPrimary.withOpacity(0.3),
+            inactiveColor: context.onPrimary.withValues(alpha: 0.3),
             // Update the state (selected index) when tapping a tab
             onTap: (index) {
               setState(() {
